@@ -226,7 +226,8 @@ class _ClientOnboardingScreenState
                           onPressed: () async {
                             final user = SupabaseService.currentUser;
                             if (user != null) await markOnboardingComplete(user.id);
-                            if (mounted) context.go('/home');
+                            if (!mounted) return;
+                            context.go('/home'); // ignore: use_build_context_synchronously
                           },
                           child: const Text(
                             'Completar más tarde',

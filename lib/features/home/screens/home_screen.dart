@@ -27,7 +27,7 @@ final homeStatsProvider = FutureProvider<_HomeStats>((ref) async {
         .select('rating')
         .eq('is_available', true)
         .count(CountOption.exact);
-    final count = resp.count ?? 0;
+    final count = resp.count;
     final rows = resp.data as List<dynamic>;
     double avg = 4.8;
     if (rows.isNotEmpty) {

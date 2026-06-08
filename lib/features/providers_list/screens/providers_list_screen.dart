@@ -75,10 +75,6 @@ class _ProvidersListScreenState extends ConsumerState<ProvidersListScreen> {
   String _sortBy = 'rating';
   bool _showMap = false;
 
-  static bool get _mapsConfigured =>
-      AppConstants.googleMapsApiKey != 'YOUR_GOOGLE_MAPS_API_KEY' &&
-      AppConstants.googleMapsApiKey.isNotEmpty;
-
   @override
   Widget build(BuildContext context) {
     final providersAsync = ref.watch(providersListProvider(widget.categoryId));
@@ -418,7 +414,7 @@ class _FilterSheetState extends State<_FilterSheet> {
           ),
           const SizedBox(height: 8),
           DropdownButtonFormField<String>(
-            value: _province,
+            initialValue: _province,
             hint: const Text('Todas las provincias'),
             decoration: const InputDecoration(),
             items: _provinces

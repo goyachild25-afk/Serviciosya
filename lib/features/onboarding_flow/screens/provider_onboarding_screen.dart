@@ -1,4 +1,3 @@
-import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -15,15 +14,9 @@ import '../providers/onboarding_provider.dart';
 
 // ─── Modelo local de configuración de servicio ────────────────────────────────
 class _ServiceConfig {
-  String pricingType; // 'fixed' | 'quote'
-  String price;
-  String description;
-
-  _ServiceConfig({
-    this.pricingType = 'fixed',
-    this.price = '',
-    this.description = '',
-  });
+  String pricingType = 'fixed'; // 'fixed' | 'quote'
+  String price = '';
+  String description = '';
 }
 
 class ProviderOnboardingScreen extends ConsumerStatefulWidget {
@@ -145,7 +138,7 @@ class _ProviderOnboardingScreenState
       // Subir avatar si se seleccionó
       if (_avatarBytes != null) {
         final ext = _avatarExt ?? 'jpg';
-        final path = '${user.id}_avatar.${ext}';
+        final path = '${user.id}_avatar.$ext';
         _uploadedAvatarUrl = await _uploadBytes(
           bucket: 'avatars',
           path: path,
@@ -235,7 +228,7 @@ class _ProviderOnboardingScreenState
           .eq('provider_id', providerId);
 
       // Insertar servicios seleccionados
-      final uuid = const Uuid();
+      const uuid = Uuid();
       final rows = _selectedIds.map((catId) {
         final cat = kServiceCategories.firstWhere((c) => c['id'] == catId);
         final cfg = _serviceConfigs[catId]!;

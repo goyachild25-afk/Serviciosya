@@ -80,7 +80,7 @@ class NotificationService {
     debugPrint('NotificationService: FCM not configured yet');
   }
 
-  /// Guarda el token FCM en la tabla device_tokens de Supabase.
+  // ignore: unused_element — se activa al descomentar FCM en initializeFCM()
   Future<void> _saveFcmToken(String token) async {
     try {
       final user = SupabaseService.currentUser;

@@ -353,11 +353,11 @@ class _BookingScreenState extends ConsumerState<BookingScreen> {
               ),
               child: Row(
                 children: [
+                  // ignore: deprecated_member_use
                   Radio<String>(
                     value: service.id,
-                    groupValue: _selectedService?.id,
-                    onChanged: (_) =>
-                        setState(() => _selectedService = service),
+                    groupValue: _selectedService?.id, // ignore: deprecated_member_use
+                    onChanged: (_) => setState(() => _selectedService = service), // ignore: deprecated_member_use
                     activeColor: AppColors.primary,
                   ),
                   Expanded(

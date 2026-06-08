@@ -135,7 +135,7 @@ final adminStatsProvider = FutureProvider.autoDispose<AdminStats>((ref) async {
         .from('profiles')
         .select()
         .count(CountOption.exact)
-        .then((r) => totalUsers = r.count ?? 0)
+        .then((r) => totalUsers = r.count)
         .catchError((_) => totalUsers = 0),
 
     // Active providers
@@ -144,7 +144,7 @@ final adminStatsProvider = FutureProvider.autoDispose<AdminStats>((ref) async {
         .select()
         .eq('is_available', true)
         .count(CountOption.exact)
-        .then((r) => activeProviders = r.count ?? 0)
+        .then((r) => activeProviders = r.count)
         .catchError((_) => activeProviders = 0),
 
     // Total bookings
@@ -152,7 +152,7 @@ final adminStatsProvider = FutureProvider.autoDispose<AdminStats>((ref) async {
         .from('bookings')
         .select()
         .count(CountOption.exact)
-        .then((r) => totalBookings = r.count ?? 0)
+        .then((r) => totalBookings = r.count)
         .catchError((_) => totalBookings = 0),
 
     // Pending bookings
@@ -161,7 +161,7 @@ final adminStatsProvider = FutureProvider.autoDispose<AdminStats>((ref) async {
         .select()
         .eq('status', 'pending')
         .count(CountOption.exact)
-        .then((r) => pendingBookings = r.count ?? 0)
+        .then((r) => pendingBookings = r.count)
         .catchError((_) => pendingBookings = 0),
 
     // Pending verifications
@@ -170,7 +170,7 @@ final adminStatsProvider = FutureProvider.autoDispose<AdminStats>((ref) async {
         .select()
         .eq('status', 'pending')
         .count(CountOption.exact)
-        .then((r) => pendingVerifications = r.count ?? 0)
+        .then((r) => pendingVerifications = r.count)
         .catchError((_) => pendingVerifications = 0),
 
     // Open disputes
@@ -179,7 +179,7 @@ final adminStatsProvider = FutureProvider.autoDispose<AdminStats>((ref) async {
         .select()
         .eq('status', 'open')
         .count(CountOption.exact)
-        .then((r) => openDisputes = r.count ?? 0)
+        .then((r) => openDisputes = r.count)
         .catchError((_) => openDisputes = 0),
 
     // Monthly revenue from completed bookings
