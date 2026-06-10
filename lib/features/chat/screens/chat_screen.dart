@@ -2,10 +2,12 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/services/supabase_service.dart';
 import '../../../core/services/demo_provider.dart';
+import '../../../core/services/payment_service.dart';
 import '../models/chat_model.dart';
 
 final chatMessagesProvider =
@@ -23,6 +25,25 @@ final chatMessagesProvider =
       .order('created_at')
       .map((data) => data.map((j) => ChatMessage.fromJson(j)).toList());
 });
+
+/// Escucha el estado de negociación del booking en tiempo real (para el banner de pago)
+final _bookingStateProvider =
+    StreamProvider.family<Map<String, dynamic>?, String>((ref, bookingId) {
+  return SupabaseService.client
+      .from('bookings')
+      .stream(primaryKey: ['id'])
+      .eq('id', bookingId)
+      .map((rows) => rows.isNotEmpty ? rows.first : null);
+});
+
+/// Decodifica JSON de forma segura — usado por burbujas de oferta y el banner
+Map<String, dynamic> _decodeJson(String content) {
+  try {
+    final decoded = jsonDecode(content);
+    if (decoded is Map<String, dynamic>) return decoded;
+  } catch (_) {}
+  return {};
+}
 
 class ChatScreen extends ConsumerStatefulWidget {
   final String bookingId;
@@ -323,6 +344,74 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     }
   }
 
+  // ── Banner de pago (solo cliente, cuando el precio está acordado) ────────────
+  Widget _buildPayBanner(double agreedPrice) {
+    // El cliente paga el precio base + 5 % de Garantía ServiciosYa
+    final total = PaymentService.clientTotal(agreedPrice);
+    return Container(
+      padding: const EdgeInsets.fromLTRB(16, 10, 12, 10),
+      decoration: BoxDecoration(
+        color: AppColors.successLight,
+        border: Border.symmetric(
+          horizontal: BorderSide(
+            color: AppColors.success.withValues(alpha: 0.3),
+          ),
+        ),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.handshake_outlined,
+              color: AppColors.success, size: 22),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text(
+                  '¡Precio acordado! 🎉',
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.success,
+                  ),
+                ),
+                Text(
+                  'Servicio RD\$${agreedPrice.toStringAsFixed(0)}'
+                  ' · Total: RD\$${total.toStringAsFixed(0)}',
+                  style: const TextStyle(
+                      fontSize: 11, color: AppColors.textSecondary),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 8),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.success,
+              foregroundColor: Colors.white,
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10)),
+              textStyle: const TextStyle(
+                  fontSize: 13, fontWeight: FontWeight.w700),
+            ),
+            onPressed: () => context.push(
+              '/payment'
+              '?bookingId=${widget.bookingId}'
+              '&amount=${total.toStringAsFixed(2)}'
+              '&service=${Uri.encodeComponent(widget.serviceName)}'
+              '&provider=${Uri.encodeComponent(widget.otherUserName)}'
+              '&currency=dop',
+            ),
+            child: const Text('Pagar ahora'),
+          ),
+        ],
+      ),
+    );
+  }
+
   // ── Build ─────────────────────────────────────────────────────────────────────
   @override
   Widget build(BuildContext context) {
@@ -330,6 +419,32 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     final currentUserId = isDemo
         ? ref.watch(demoUserProvider)?.id ?? ''
         : SupabaseService.currentUser?.id ?? '';
+
+    // ── Detectar precio acordado ──────────────────────────────────────────────
+    // Real: leer negotiation_status del booking en tiempo real
+    // Demo: buscar el último mensaje offerAccepted en los mensajes locales
+    double? agreedPrice;
+    if (!isDemo) {
+      final bookingAsync = ref.watch(_bookingStateProvider(widget.bookingId));
+      final booking = bookingAsync.valueOrNull;
+      if (booking?['negotiation_status'] == 'agreed') {
+        agreedPrice = (booking!['agreed_price'] as num?)?.toDouble();
+      }
+    } else {
+      for (final msg in _demoLocalMessages.reversed) {
+        if (msg.type == MessageType.offerAccepted) {
+          final data = _decodeJson(msg.content);
+          agreedPrice = (data['price'] as num?)?.toDouble();
+          break;
+        }
+      }
+    }
+    // El banner de pago solo lo ve el CLIENTE (nunca el prestador)
+    // Usar variable local non-null para que la type promotion funcione en el widget tree
+    final double? payPrice =
+        (!widget.isProvider && agreedPrice != null && agreedPrice > 0)
+            ? agreedPrice
+            : null;
 
     return Scaffold(
       appBar: AppBar(
@@ -379,6 +494,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                 ? _buildDemoMessages(currentUserId)
                 : _buildRealtimeMessages(currentUserId),
           ),
+          // Banner de pago: aparece en cuanto el precio queda acordado
+          if (payPrice != null) _buildPayBanner(payPrice),
           _buildInputBar(),
         ],
       ),
@@ -652,7 +769,7 @@ class _MessageBubble extends StatelessWidget {
   // ── Burbuja de oferta / contraoferta ─────────────────────────────────────────
   Widget _buildOfferBubble(BuildContext context) {
     final isOffer = message.type == MessageType.offer;
-    final Map<String, dynamic> data = _parseJson(message.content);
+    final Map<String, dynamic> data = _decodeJson(message.content);
     final price = (data['price'] as num?)?.toDouble() ?? 0;
     final description = data['description'] as String? ?? '';
 
@@ -819,7 +936,7 @@ class _MessageBubble extends StatelessWidget {
   // ── Mensaje de estado (aceptado / rechazado) ──────────────────────────────────
   Widget _buildStatusMessage(BuildContext context) {
     final isAccepted = message.type == MessageType.offerAccepted;
-    final Map<String, dynamic> data = _parseJson(message.content);
+    final Map<String, dynamic> data = _decodeJson(message.content);
     final price = (data['price'] as num?)?.toDouble();
     final by = data['by'] as String?;
     final byLabel = by == 'client' ? 'el cliente' : 'el prestador';
@@ -870,13 +987,6 @@ class _MessageBubble extends StatelessWidget {
     );
   }
 
-  Map<String, dynamic> _parseJson(String content) {
-    try {
-      final decoded = jsonDecode(content);
-      if (decoded is Map<String, dynamic>) return decoded;
-    } catch (_) {}
-    return {};
-  }
 }
 
 // ═════════════════════════════════════════════════════════════════════════════
