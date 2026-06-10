@@ -366,7 +366,6 @@ class _AvailabilityToggleState extends ConsumerState<_AvailabilityToggle> {
                 )
               : Switch(
                   value: _isAvailable,
-                  activeThumbColor: AppColors.success,
                   onChanged: (_) => _toggle(),
                 ),
         ],

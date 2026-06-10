@@ -414,7 +414,7 @@ class _FilterSheetState extends State<_FilterSheet> {
           ),
           const SizedBox(height: 8),
           DropdownButtonFormField<String>(
-            initialValue: _province,
+            value: _province,
             hint: const Text('Todas las provincias'),
             decoration: const InputDecoration(),
             items: _provinces
