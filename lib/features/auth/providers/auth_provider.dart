@@ -3,6 +3,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/user_model.dart';
 import '../../../core/services/supabase_service.dart';
 import '../../../core/services/demo_provider.dart';
+import '../../../core/services/notification_service.dart';
 
 // ─── Stream de sesión real ────────────────────────────────────────────────────
 final authStateProvider = StreamProvider<User?>((ref) {
@@ -137,6 +138,10 @@ class AuthController extends StateNotifier<AsyncValue<void>> {
 
       _clearDemo(); // salir del modo demo al hacer login real
       _ref.invalidate(currentUserProvider);
+      // Registrar dispositivo para push notifications
+      if (response.user != null) {
+        NotificationService.registerUser(response.user!.id);
+      }
       state = const AsyncValue.data(null);
     } catch (e, st) {
       state = AsyncValue.error(e, st);
@@ -147,7 +152,9 @@ class AuthController extends StateNotifier<AsyncValue<void>> {
   Future<void> signOut() async {
     state = const AsyncValue.loading();
     try {
+      final userId = SupabaseService.currentUser?.id;
       _clearDemo(); // limpiar demo antes de cerrar sesión
+      if (userId != null) await NotificationService.unregisterUser(userId);
       await SupabaseService.signOut();
       _ref.invalidate(currentUserProvider);
       state = const AsyncValue.data(null);

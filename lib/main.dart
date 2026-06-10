@@ -4,6 +4,7 @@ import 'package:timeago/timeago.dart' as timeago;
 import 'app.dart';
 import 'core/services/supabase_service.dart';
 import 'core/services/payment_service.dart';
+import 'core/services/notification_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -11,14 +12,21 @@ void main() async {
   // Locales para timeago en español
   timeago.setLocaleMessages('es', timeago.EsMessages());
 
-  // Inicializar Supabase (falla silenciosamente si no hay credenciales reales)
+  // Inicializar Supabase
   try {
     await SupabaseService.initialize();
   } catch (_) {
     // Sin credenciales reales → la app funciona en Modo Demo
   }
 
-  // Inicializar Stripe (opcional, solo para pagos reales)
+  // Inicializar Firebase (para push notifications)
+  try {
+    await NotificationService.initializeFirebase();
+  } catch (_) {
+    // Firebase no configurado aún → notificaciones no disponibles
+  }
+
+  // Inicializar Stripe (para pagos reales)
   try {
     PaymentService.initialize();
   } catch (_) {}

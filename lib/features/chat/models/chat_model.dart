@@ -26,13 +26,7 @@ class ChatMessage {
       senderId: json['sender_id'] as String,
       senderName: json['sender_name'] as String,
       content: json['content'] as String,
-      type: MessageType.values.firstWhere(
-        (e) => e.name == (json['type'] as String?)?.replaceAll('_', ''),
-        orElse: () => MessageType.values.firstWhere(
-          (e) => e.name == json['type'],
-          orElse: () => MessageType.text,
-        ),
-      ),
+      type: _typeFromDb(json['type'] as String? ?? 'text'),
       createdAt: DateTime.parse(json['created_at'] as String),
       isRead: json['is_read'] as bool? ?? false,
     );
@@ -49,7 +43,6 @@ class ChatMessage {
         'is_read': isRead,
       };
 
-  // Público para permitir su uso desde chat_screen.dart al insertar mensajes
   static String typeToDb(MessageType t) {
     switch (t) {
       case MessageType.text: return 'text';
@@ -74,6 +67,18 @@ enum MessageType {
   counterOffer,   // Cliente envía contraoferta → content: {"price": 2000}
   offerAccepted,  // Alguna de las partes acepta → content: {"price": 2000, "by": "client"}
   offerRejected,  // Alguna de las partes rechaza → content: {}
+}
+
+MessageType _typeFromDb(String s) {
+  switch (s) {
+    case 'offer':          return MessageType.offer;
+    case 'counter_offer':  return MessageType.counterOffer;
+    case 'offer_accepted': return MessageType.offerAccepted;
+    case 'offer_rejected': return MessageType.offerRejected;
+    case 'image':          return MessageType.image;
+    case 'system':         return MessageType.system;
+    default:               return MessageType.text;
+  }
 }
 
 class ChatConversation {

@@ -279,7 +279,8 @@ CREATE TABLE IF NOT EXISTS chat_messages (
   sender_id UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
   sender_name TEXT NOT NULL,
   content TEXT NOT NULL,
-  message_type TEXT NOT NULL CHECK (message_type IN ('text', 'image', 'system')) DEFAULT 'text',
+  type TEXT NOT NULL CHECK (type IN ('text', 'image', 'system', 'offer', 'counter_offer', 'offer_accepted', 'offer_rejected')) DEFAULT 'text',
+  is_read BOOLEAN NOT NULL DEFAULT FALSE,
   image_url TEXT,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );

@@ -1,139 +1,109 @@
-// ─────────────────────────────────────────────────────────────────────────────
-// NotificationService — Push Notifications via FCM
-//
-// ESTADO: Estructura lista. Para activar:
-//   1. Crear proyecto en Firebase Console (console.firebase.google.com)
-//   2. Agregar app Android (com.serviciosya.app) y iOS
-//   3. Descargar google-services.json → android/app/
-//   4. Descargar GoogleService-Info.plist → ios/Runner/
-//   5. En pubspec.yaml agregar:
-//        firebase_core: ^3.x.x
-//        firebase_messaging: ^15.x.x
-//        flutter_local_notifications: ^18.x.x
-//   6. Quitar los comentarios de este archivo
-//   7. Llamar NotificationService.initialize() en main.dart
-//   8. Crear Supabase Edge Function 'send-push' que llame a FCM API
-// ─────────────────────────────────────────────────────────────────────────────
-
+import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../config/firebase_options.dart';
 import 'supabase_service.dart';
 
-// ─── Provider global ──────────────────────────────────────────────────────────
-final notificationServiceProvider = Provider<NotificationService>((ref) {
-  return NotificationService();
-});
+// Handler de background — debe ser función top-level
+@pragma('vm:entry-point')
+Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  debugPrint('FCM background: ${message.notification?.title}');
+}
 
 class NotificationService {
-  static final NotificationService _instance = NotificationService._internal();
-  factory NotificationService() => _instance;
-  NotificationService._internal();
+  NotificationService._();
 
-  // FCM token del dispositivo actual
-  String? _fcmToken;
-  String? get fcmToken => _fcmToken;
+  static bool _initialized = false;
 
-  /// Inicializar el servicio.
-  /// Llamar desde main.dart después de inicializar Supabase.
-  Future<void> initialize() async {
-    if (kIsWeb) {
-      // Push notifications no disponibles en web — usar polling via Supabase Realtime
-      debugPrint('NotificationService: Web mode — FCM not available, using Supabase Realtime');
-      return;
-    }
-
-    // ── Descomentar cuando se agreguen las dependencias de Firebase ──────────
-    //
-    // await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
-    //
-    // final messaging = FirebaseMessaging.instance;
-    //
-    // // Solicitar permisos (iOS)
-    // await messaging.requestPermission(
-    //   alert: true,
-    //   badge: true,
-    //   sound: true,
-    // );
-    //
-    // // Obtener token FCM
-    // _fcmToken = await messaging.getToken();
-    // debugPrint('FCM Token: $_fcmToken');
-    //
-    // // Guardar token en Supabase para enviar notificaciones al usuario
-    // if (_fcmToken != null) {
-    //   await _saveFcmToken(_fcmToken!);
-    // }
-    //
-    // // Escuchar cambios de token
-    // messaging.onTokenRefresh.listen(_saveFcmToken);
-    //
-    // // Manejar notificaciones en foreground
-    // FirebaseMessaging.onMessage.listen(_handleForegroundMessage);
-    //
-    // // Manejar tap en notificación (app en background/terminada)
-    // FirebaseMessaging.onMessageOpenedApp.listen(_handleNotificationTap);
-    //
-    // // Inicializar flutter_local_notifications para mostrar en foreground
-    // await _initLocalNotifications();
-    // ─────────────────────────────────────────────────────────────────────────
-
-    debugPrint('NotificationService: FCM not configured yet');
+  /// Inicializar Firebase + FCM. Llamar en main() antes de runApp.
+  static Future<void> initializeFirebase() async {
+    if (_initialized) return;
+    await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+    FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
+    _initialized = true;
   }
 
-  // ignore: unused_element — se activa al descomentar FCM en initializeFCM()
-  Future<void> _saveFcmToken(String token) async {
+  /// Solicitar permiso y guardar token FCM del usuario logueado.
+  static Future<void> registerUser(String userId) async {
     try {
-      final user = SupabaseService.currentUser;
-      if (user == null) return;
+      final settings = await FirebaseMessaging.instance.requestPermission(
+        alert: true, badge: true, sound: true,
+      );
+      if (settings.authorizationStatus == AuthorizationStatus.denied) return;
 
+      final token = kIsWeb
+          ? await FirebaseMessaging.instance.getToken(
+              vapidKey: AppFirebaseOptions.webVapidKey)
+          : await FirebaseMessaging.instance.getToken();
+
+      if (token != null) await _upsertToken(userId, token);
+
+      FirebaseMessaging.instance.onTokenRefresh
+          .listen((t) => _upsertToken(userId, t));
+    } catch (e) {
+      debugPrint('FCM registerUser error: $e');
+    }
+  }
+
+  static Future<void> _upsertToken(String userId, String token) async {
+    try {
       await SupabaseService.client.from('device_tokens').upsert({
-        'user_id': user.id,
+        'user_id': userId,
         'token': token,
-        'platform': defaultTargetPlatform.name,
+        'platform': kIsWeb ? 'web' : defaultTargetPlatform.name.toLowerCase(),
         'updated_at': DateTime.now().toIso8601String(),
       }, onConflict: 'user_id,token');
     } catch (e) {
-      debugPrint('Error saving FCM token: $e');
+      debugPrint('FCM upsertToken error: $e');
     }
   }
 
-  // ── Handlers (descomentar con Firebase) ─────────────────────────────────────
+  /// Eliminar token cuando el usuario cierra sesión.
+  static Future<void> unregisterUser(String userId) async {
+    try {
+      final token = await FirebaseMessaging.instance.getToken();
+      if (token == null) return;
+      await SupabaseService.client
+          .from('device_tokens')
+          .delete()
+          .eq('user_id', userId)
+          .eq('token', token);
+      await FirebaseMessaging.instance.deleteToken();
+    } catch (e) {
+      debugPrint('FCM unregisterUser error: $e');
+    }
+  }
 
-  // void _handleForegroundMessage(RemoteMessage message) {
-  //   debugPrint('FCM foreground: ${message.notification?.title}');
-  //   _showLocalNotification(message);
-  // }
+  /// Stream de notificaciones con app en primer plano.
+  static Stream<RemoteMessage> get onForeground =>
+      FirebaseMessaging.onMessage;
 
-  // void _handleNotificationTap(RemoteMessage message) {
-  //   // Navegar según el tipo de notificación
-  //   final data = message.data;
-  //   final type = data['type'] as String?;
-  //   switch (type) {
-  //     case 'bookingAccepted':
-  //     case 'newBookingRequest':
-  //       // router.push('/bookings/${data['booking_id']}');
-  //       break;
-  //     case 'newMessage':
-  //       // router.push('/chat/${data['booking_id']}');
-  //       break;
-  //   }
-  // }
+  /// Stream de mensajes que abrieron la app.
+  static Stream<RemoteMessage> get onOpened =>
+      FirebaseMessaging.onMessageOpenedApp;
+
+  /// Mensaje que lanzó la app desde estado terminado.
+  static Future<RemoteMessage?> getInitialMessage() =>
+      FirebaseMessaging.instance.getInitialMessage();
+
+  /// Tipo de notificación para navegar al destino correcto.
+  static String? getRouteFromMessage(RemoteMessage msg) {
+    final type = msg.data['type'];
+    final id = msg.data['booking_id'] ?? msg.data['id'];
+    switch (type) {
+      case 'new_booking':
+      case 'booking_accepted':
+      case 'booking_completed':
+        return id != null ? '/bookings' : null;
+      case 'new_message':
+        return id != null ? '/chat/$id' : null;
+      default:
+        return null;
+    }
+  }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// SQL para crear la tabla device_tokens en Supabase:
-//
-// CREATE TABLE IF NOT EXISTS device_tokens (
-//   id          UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-//   user_id     UUID REFERENCES profiles(id) ON DELETE CASCADE NOT NULL,
-//   token       TEXT NOT NULL,
-//   platform    TEXT NOT NULL DEFAULT 'android',
-//   updated_at  TIMESTAMPTZ DEFAULT NOW(),
-//   UNIQUE(user_id, token)
-// );
-//
-// ALTER TABLE device_tokens ENABLE ROW LEVEL SECURITY;
-//
-// CREATE POLICY "users_own_tokens" ON device_tokens
-//   FOR ALL USING (auth.uid() = user_id);
-// ─────────────────────────────────────────────────────────────────────────────
+final foregroundMessageProvider =
+    StreamProvider<RemoteMessage>((ref) => NotificationService.onForeground);
