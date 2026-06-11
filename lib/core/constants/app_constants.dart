@@ -4,7 +4,7 @@ class AppConstants {
   // ⚠️ Reemplaza con tus credenciales reales de supabase.com
   static const String supabaseUrl = 'https://ivexcnunszcqoqzzdlfz.supabase.co';
   static const String supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml2ZXhjbnVuc3pjcW9xenpkbGZ6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk5MDg4MzksImV4cCI6MjA5NTQ4NDgzOX0.q-65Ncoe7GAU3TvUSQg_nWD0j-jRzPmB8vbEH-kft9A';
-  static const String googleMapsApiKey = 'YOUR_GOOGLE_MAPS_API_KEY';
+  static const String googleMapsApiKey = 'AIzaSyAl7co1z59RELF4bZDO2HCRcWDtINPh560';
   static const String stripePublishableKey = 'YOUR_STRIPE_PUBLISHABLE_KEY';
 
   static const double defaultRadius = 50.0; // km
