@@ -171,7 +171,7 @@ class _SearchingProviderScreenState
             Padding(
               padding: const EdgeInsets.fromLTRB(24, 0, 24, 32),
               child: Text(
-                'Si ningún prestador acepta en $_timeoutMinutes minutos,\nte avisaremos para reagendar.',
+                'Si ningún prestador acepta en $_timeoutMinutes minutos,\nte notificaremos cuando uno esté disponible.',
                 textAlign: TextAlign.center,
                 style: const TextStyle(
                   fontSize: 12,
@@ -191,15 +191,7 @@ class _SearchingProviderScreenState
   Widget _buildFoundUI(Map<String, dynamic> booking) {
     final providerName = booking['provider_name'] as String? ?? 'Prestador';
     final serviceName = booking['service_name'] as String? ?? 'Servicio';
-    final scheduledDate = booking['scheduled_date'] as String?;
     final bookingId = booking['id'] as String;
-
-    DateTime? date;
-    if (scheduledDate != null) {
-      try {
-        date = DateTime.parse(scheduledDate).toLocal();
-      } catch (_) {}
-    }
 
     return Scaffold(
       backgroundColor: AppColors.successLight,
@@ -253,7 +245,7 @@ class _SearchingProviderScreenState
               const SizedBox(height: 8),
 
               Text(
-                '$providerName aceptó tu solicitud',
+                '$providerName está en camino',
                 style: const TextStyle(
                   fontSize: 15,
                   color: AppColors.textSecondary,
@@ -289,15 +281,12 @@ class _SearchingProviderScreenState
                       label: 'Servicio',
                       value: serviceName,
                     ),
-                    if (date != null) ...[
-                      const Divider(height: 20),
-                      _ConfirmRow(
-                        icon: Icons.calendar_today_outlined,
-                        label: 'Fecha',
-                        value:
-                            '${date.day}/${date.month}/${date.year} a las ${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}',
-                      ),
-                    ],
+                    const Divider(height: 20),
+                    const _ConfirmRow(
+                      icon: Icons.bolt_rounded,
+                      label: 'Llegada',
+                      value: 'Lo antes posible',
+                    ),
                   ],
                 ),
               ),
@@ -420,14 +409,6 @@ class _SearchingProviderScreenState
   Widget _buildBookingSummary(Map<String, dynamic> booking) {
     final serviceName = booking['service_name'] as String? ?? '';
     final address = booking['address'] as String? ?? '';
-    final scheduledDate = booking['scheduled_date'] as String?;
-
-    DateTime? date;
-    if (scheduledDate != null) {
-      try {
-        date = DateTime.parse(scheduledDate).toLocal();
-      } catch (_) {}
-    }
 
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 24),
@@ -452,13 +433,11 @@ class _SearchingProviderScreenState
               text: address,
             ),
           ],
-          if (date != null) ...[
-            const SizedBox(height: 8),
-            _SummaryRow(
-              icon: Icons.calendar_today_outlined,
-              text: '${date.day}/${date.month}/${date.year} a las ${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}',
-            ),
-          ],
+          const SizedBox(height: 8),
+          const _SummaryRow(
+            icon: Icons.bolt_rounded,
+            text: 'Servicio inmediato',
+          ),
         ],
       ),
     );

@@ -61,20 +61,19 @@ class _BookingScreenState extends ConsumerState<BookingScreen> {
       _showSnack('Selecciona un servicio', AppColors.warning);
       return;
     }
-    if (_selectedDate == null || _selectedTime == null) {
-      _showSnack('Selecciona fecha y hora', AppColors.warning);
-      return;
-    }
 
     setState(() => _isLoading = true);
 
-    final scheduledDateTime = DateTime(
-      _selectedDate!.year,
-      _selectedDate!.month,
-      _selectedDate!.day,
-      _selectedTime!.hour,
-      _selectedTime!.minute,
-    );
+    // Scheduled now (or future if user selected date/time)
+    final scheduledDateTime = (_selectedDate != null && _selectedTime != null)
+        ? DateTime(
+            _selectedDate!.year,
+            _selectedDate!.month,
+            _selectedDate!.day,
+            _selectedTime!.hour,
+            _selectedTime!.minute,
+          )
+        : DateTime.now();
 
     // ── Modo demo ──────────────────────────────────────────────────
     final isDemo = ref.read(demoModeProvider);
@@ -259,7 +258,7 @@ class _BookingScreenState extends ConsumerState<BookingScreen> {
                   ),
                   const SizedBox(height: 16),
                   PrimaryButton(
-                    label: 'Confirmar solicitud',
+                    label: '⚡ Solicitar ahora',
                     onPressed: () => _submit(provider),
                     isLoading: _isLoading,
                   ),

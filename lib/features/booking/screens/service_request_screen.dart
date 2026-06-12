@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:intl/intl.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/services/supabase_service.dart';
 import '../../../core/services/demo_provider.dart';
@@ -28,8 +27,6 @@ class ServiceRequestScreen extends ConsumerStatefulWidget {
 
 class _ServiceRequestScreenState extends ConsumerState<ServiceRequestScreen> {
   final _formKey = GlobalKey<FormState>();
-  DateTime? _selectedDate;
-  TimeOfDay? _selectedTime;
   final _addressCtrl = TextEditingController();
   final _notesCtrl = TextEditingController();
   bool _isLoading = false;
@@ -46,49 +43,17 @@ class _ServiceRequestScreenState extends ConsumerState<ServiceRequestScreen> {
     super.dispose();
   }
 
-  Future<void> _pickDate() async {
-    final now = DateTime.now();
-    final date = await showDatePicker(
-      context: context,
-      initialDate: now.add(const Duration(days: 1)),
-      firstDate: now,
-      lastDate: now.add(const Duration(days: 60)),
-    );
-    if (date != null) setState(() => _selectedDate = date);
-  }
-
-  Future<void> _pickTime() async {
-    final time = await showTimePicker(
-      context: context,
-      initialTime: const TimeOfDay(hour: 9, minute: 0),
-    );
-    if (time != null) setState(() => _selectedTime = time);
-  }
-
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
-    if (_selectedDate == null || _selectedTime == null) {
-      _showSnack('Selecciona fecha y hora', AppColors.warning);
-      return;
-    }
-
     setState(() => _isLoading = true);
-
-    final scheduledDateTime = DateTime(
-      _selectedDate!.year,
-      _selectedDate!.month,
-      _selectedDate!.day,
-      _selectedTime!.hour,
-      _selectedTime!.minute,
-    );
 
     // ── Modo demo ─────────────────────────────────────────────────────────────
     if (ref.read(demoModeProvider)) {
       await Future.delayed(const Duration(milliseconds: 600));
       if (mounted) {
         setState(() => _isLoading = false);
-        final demoId = 'book-${DateTime.now().millisecondsSinceEpoch}';
-        context.pushReplacement('/searching/$demoId');
+        context.pushReplacement(
+            '/searching/book-${DateTime.now().millisecondsSinceEpoch}');
       }
       return;
     }
@@ -107,7 +72,9 @@ class _ServiceRequestScreenState extends ConsumerState<ServiceRequestScreen> {
           .from('bookings')
           .insert({
             'client_id': user.id,
-            'client_name': profile?['full_name'] as String? ?? user.email?.split('@').first ?? 'Cliente',
+            'client_name': profile?['full_name'] as String? ??
+                user.email?.split('@').first ??
+                'Cliente',
             'client_province': profile?['province'] as String? ?? '',
             'provider_id': null,
             'provider_name': null,
@@ -116,12 +83,15 @@ class _ServiceRequestScreenState extends ConsumerState<ServiceRequestScreen> {
             'category_id': widget.categoryId,
             'status': 'pending',
             'payment_status': 'pending',
-            'scheduled_date': scheduledDateTime.toIso8601String(),
-            'notes': _notesCtrl.text.trim().isEmpty ? null : _notesCtrl.text.trim(),
+            'scheduled_date': DateTime.now().toIso8601String(),
+            'notes': _notesCtrl.text.trim().isEmpty
+                ? null
+                : _notesCtrl.text.trim(),
             'address': _addressCtrl.text.trim(),
-            'form_answers': widget.filterNotes != null && widget.filterNotes!.isNotEmpty
-                ? {'filter_notes': widget.filterNotes}
-                : null,
+            'form_answers':
+                widget.filterNotes != null && widget.filterNotes!.isNotEmpty
+                    ? {'filter_notes': widget.filterNotes}
+                    : null,
             'created_at': DateTime.now().toIso8601String(),
           })
           .select('id')
@@ -131,16 +101,16 @@ class _ServiceRequestScreenState extends ConsumerState<ServiceRequestScreen> {
         context.pushReplacement('/searching/${inserted['id']}');
       }
     } catch (e) {
-      _showSnack('Error al crear la solicitud: $e', AppColors.error);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+              content: Text('Error al crear la solicitud: $e'),
+              backgroundColor: AppColors.error),
+        );
+      }
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
-  }
-
-  void _showSnack(String msg, [Color color = AppColors.error]) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(msg), backgroundColor: color),
-    );
   }
 
   @override
@@ -162,7 +132,7 @@ class _ServiceRequestScreenState extends ConsumerState<ServiceRequestScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // ── Encabezado de categoría ──────────────────────────────────────
+              // ── Encabezado ───────────────────────────────────────────────────
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
@@ -174,13 +144,15 @@ class _ServiceRequestScreenState extends ConsumerState<ServiceRequestScreen> {
                   ),
                   borderRadius: BorderRadius.circular(16),
                   border: Border.all(
-                    color: (cat?.color ?? AppColors.primary).withValues(alpha: 0.3),
+                    color:
+                        (cat?.color ?? AppColors.primary).withValues(alpha: 0.3),
                   ),
                 ),
                 child: Row(
                   children: [
-                    Text(cat?.emoji ?? '🔧', style: const TextStyle(fontSize: 32)),
-                    const SizedBox(width: 12),
+                    Text(cat?.emoji ?? '🔧',
+                        style: const TextStyle(fontSize: 36)),
+                    const SizedBox(width: 14),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -188,18 +160,32 @@ class _ServiceRequestScreenState extends ConsumerState<ServiceRequestScreen> {
                           Text(
                             widget.categoryName,
                             style: const TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w700,
-                            ),
+                                fontSize: 17, fontWeight: FontWeight.w700),
                           ),
-                          Text(
-                            'Vamos a encontrarte un prestador disponible',
+                          const SizedBox(height: 2),
+                          const Text(
+                            'El prestador llega lo antes posible',
                             style: TextStyle(
-                              fontSize: 12,
-                              color: AppColors.textSecondary,
-                            ),
+                                fontSize: 12, color: AppColors.textSecondary),
                           ),
                         ],
+                      ),
+                    ),
+                    // "Ahora" badge
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 10, vertical: 5),
+                      decoration: BoxDecoration(
+                        color: AppColors.success,
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: const Text(
+                        'Ya',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w800,
+                          fontSize: 13,
+                        ),
                       ),
                     ),
                   ],
@@ -207,7 +193,8 @@ class _ServiceRequestScreenState extends ConsumerState<ServiceRequestScreen> {
               ),
 
               // ── Resumen del filtro ───────────────────────────────────────────
-              if (widget.filterNotes != null && widget.filterNotes!.isNotEmpty) ...[
+              if (widget.filterNotes != null &&
+                  widget.filterNotes!.isNotEmpty) ...[
                 const SizedBox(height: 16),
                 Container(
                   padding: const EdgeInsets.all(12),
@@ -242,46 +229,15 @@ class _ServiceRequestScreenState extends ConsumerState<ServiceRequestScreen> {
 
               const SizedBox(height: 24),
 
-              // ── Fecha y hora ─────────────────────────────────────────────────
-              const Text(
-                'Fecha y hora preferida',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
-              ),
-              const SizedBox(height: 12),
-              Row(
-                children: [
-                  Expanded(
-                    child: GestureDetector(
-                      onTap: _pickDate,
-                      child: _DateTimeBox(
-                        icon: Icons.calendar_today_outlined,
-                        label: 'Fecha',
-                        value: _selectedDate != null
-                            ? DateFormat('dd/MM/yyyy').format(_selectedDate!)
-                            : null,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: GestureDetector(
-                      onTap: _pickTime,
-                      child: _DateTimeBox(
-                        icon: Icons.access_time,
-                        label: 'Hora',
-                        value: _selectedTime?.format(context),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-
-              const SizedBox(height: 24),
-
               // ── Dirección ────────────────────────────────────────────────────
               const Text(
-                'Dirección del servicio',
+                '¿Dónde necesitas el servicio?',
                 style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+              ),
+              const SizedBox(height: 4),
+              const Text(
+                'El prestador irá directamente a esta dirección',
+                style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
               ),
               const SizedBox(height: 12),
               AppTextField(
@@ -296,10 +252,10 @@ class _ServiceRequestScreenState extends ConsumerState<ServiceRequestScreen> {
 
               const SizedBox(height: 24),
 
-              // ── Notas adicionales ────────────────────────────────────────────
+              // ── Notas ────────────────────────────────────────────────────────
               AppTextField(
-                label: 'Detalles adicionales (opcional)',
-                hint: 'Instrucciones, preferencias...',
+                label: 'Describe el problema (opcional)',
+                hint: 'Ej: El grifo del baño está goteando...',
                 controller: _notesCtrl,
                 maxLines: 3,
                 prefixIcon: Icons.note_outlined,
@@ -307,24 +263,23 @@ class _ServiceRequestScreenState extends ConsumerState<ServiceRequestScreen> {
 
               const SizedBox(height: 20),
 
-              // ── Garantía ─────────────────────────────────────────────────────
+              // ── Aviso de inmediatez ──────────────────────────────────────────
               Container(
                 padding: const EdgeInsets.all(14),
                 decoration: BoxDecoration(
                   color: AppColors.primaryLighter,
                   borderRadius: BorderRadius.circular(14),
                   border: Border.all(
-                    color: AppColors.primary.withValues(alpha: 0.25),
-                  ),
+                      color: AppColors.primary.withValues(alpha: 0.25)),
                 ),
                 child: const Row(
                   children: [
-                    Icon(Icons.task_alt_rounded,
+                    Icon(Icons.bolt_rounded,
                         size: 20, color: AppColors.primaryDark),
                     SizedBox(width: 10),
                     Expanded(
                       child: Text(
-                        'No se realiza ningún pago ahora. Solo pagas cuando el servicio esté completado.',
+                        'El prestador se desplazará de inmediato. Pagas solo cuando el servicio quede completado.',
                         style: TextStyle(
                           fontSize: 12,
                           color: AppColors.primaryDark,
@@ -340,7 +295,7 @@ class _ServiceRequestScreenState extends ConsumerState<ServiceRequestScreen> {
               const SizedBox(height: 20),
 
               PrimaryButton(
-                label: 'Buscar prestador',
+                label: '⚡ Solicitar ahora',
                 onPressed: _submit,
                 isLoading: _isLoading,
               ),
@@ -349,67 +304,6 @@ class _ServiceRequestScreenState extends ConsumerState<ServiceRequestScreen> {
             ],
           ),
         ),
-      ),
-    );
-  }
-}
-
-// ── Widgets internos ──────────────────────────────────────────────────────────
-
-class _DateTimeBox extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final String? value;
-
-  const _DateTimeBox({
-    required this.icon,
-    required this.label,
-    this.value,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: AppColors.surfaceVariant,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: value != null ? AppColors.primary : AppColors.border,
-          width: value != null ? 1.5 : 1,
-        ),
-      ),
-      child: Row(
-        children: [
-          Icon(
-            icon,
-            color: value != null ? AppColors.primary : AppColors.textHint,
-            size: 18,
-          ),
-          const SizedBox(width: 8),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                label,
-                style: const TextStyle(
-                  fontSize: 11,
-                  color: AppColors.textSecondary,
-                ),
-              ),
-              Text(
-                value ?? 'Seleccionar',
-                style: TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w500,
-                  color: value != null
-                      ? AppColors.textPrimary
-                      : AppColors.textHint,
-                ),
-              ),
-            ],
-          ),
-        ],
       ),
     );
   }

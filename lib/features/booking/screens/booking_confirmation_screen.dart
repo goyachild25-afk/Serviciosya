@@ -45,7 +45,7 @@ class BookingConfirmationScreen extends StatelessWidget {
               ),
               const SizedBox(height: 10),
               const Text(
-                'El profesional revisará tu solicitud y te confirmará en breve. Recibirás una notificación cuando acepte.',
+                'Estamos contactando a un prestador disponible en tu área. Te notificaremos en cuanto uno acepte.',
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   color: AppColors.textSecondary,
@@ -78,9 +78,9 @@ class BookingConfirmationScreen extends StatelessWidget {
                     const SizedBox(height: 16),
                     _NextStep(
                       step: 1,
-                      icon: Icons.notifications_outlined,
-                      title: 'Espera la confirmación',
-                      subtitle: 'El profesional acepta la solicitud',
+                      icon: Icons.bolt_rounded,
+                      title: 'Prestador en camino',
+                      subtitle: 'Acepta y se dirige a tu dirección ahora',
                       color: AppColors.primary,
                     ),
                     const SizedBox(height: 12),
@@ -88,7 +88,7 @@ class BookingConfirmationScreen extends StatelessWidget {
                       step: 2,
                       icon: Icons.home_work_outlined,
                       title: 'Recibe el servicio',
-                      subtitle: 'El profesional llega en la fecha acordada',
+                      subtitle: 'El profesional llega lo antes posible',
                       color: AppColors.secondary,
                     ),
                     const SizedBox(height: 12),
