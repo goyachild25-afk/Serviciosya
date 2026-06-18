@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../features/auth/providers/auth_provider.dart';
+import '../../features/auth/models/user_model.dart';
 import '../../core/services/demo_provider.dart';
 import '../../features/auth/screens/splash_screen.dart';
 import '../../features/auth/screens/onboarding_screen.dart';
@@ -32,6 +33,7 @@ import '../../features/onboarding_flow/screens/client_onboarding_screen.dart';
 import '../../features/onboarding_flow/screens/provider_onboarding_screen.dart';
 import '../../features/booking/screens/service_request_screen.dart';
 import '../../features/booking/screens/searching_provider_screen.dart';
+import '../../features/auth/screens/email_verification_screen.dart';
 
 // ── Transition helpers ────────────────────────────────────────────────────────
 
@@ -89,6 +91,7 @@ CustomTransitionPage<void> _slideUpPage(LocalKey key, Widget child) =>
 
 final routerProvider = Provider<GoRouter>((ref) {
   final authState = ref.watch(authStateProvider);
+  final userRole = ref.watch(userRoleProvider);
 
   return GoRouter(
     initialLocation: '/',
@@ -99,16 +102,30 @@ final routerProvider = Provider<GoRouter>((ref) {
 
       final publicPaths = [
         '/', '/onboarding', '/login', '/register',
-        '/setup-client', '/setup-provider',
+        '/setup-client', '/setup-provider', '/verify-email',
       ];
       final isPublic = publicPaths.any((p) => path.startsWith(p));
 
       if (isDemo) return null;
 
       if (!isLoggedIn && !isPublic) return '/login';
-      if (isLoggedIn && (path == '/login' || path == '/onboarding')) {
+
+      // Tras login/onboarding → redirige según rol
+      if (isLoggedIn && (path == '/login' || path == '/onboarding' || path == '/')) {
+        if (userRole == UserRole.provider) return '/dashboard';
         return '/home';
       }
+
+      // Guarda cruzada: prestadores no acceden al home de cliente
+      if (isLoggedIn && path == '/home' && userRole == UserRole.provider) {
+        return '/dashboard';
+      }
+
+      // Guarda cruzada: clientes no acceden al dashboard de prestador
+      if (isLoggedIn && path == '/dashboard' && userRole == UserRole.client) {
+        return '/home';
+      }
+
       return null;
     },
     routes: [
@@ -147,6 +164,19 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/setup-provider',
         pageBuilder: (_, state) =>
             _fadePage(state.pageKey, const ProviderOnboardingScreen()),
+      ),
+      GoRoute(
+        path: '/verify-email',
+        pageBuilder: (context, state) {
+          final p = state.uri.queryParameters;
+          return _fadePage(
+            state.pageKey,
+            EmailVerificationScreen(
+              email: p['email'] ?? '',
+              nextRoute: p['next'] ?? '/home',
+            ),
+          );
+        },
       ),
 
       // ── Pantallas principales ───────────────────────────────────────────────

@@ -13,6 +13,7 @@ class UserModel {
   final DateTime createdAt;
   final bool isVerified;
   final bool isActive;
+  final bool emailVerified;
 
   const UserModel({
     required this.id,
@@ -27,6 +28,7 @@ class UserModel {
     required this.createdAt,
     this.isVerified = false,
     this.isActive = true,
+    this.emailVerified = false,
   });
 
   factory UserModel.fromJson(Map<String, dynamic> json) {
@@ -46,6 +48,7 @@ class UserModel {
       createdAt: DateTime.parse(json['created_at'] as String),
       isVerified: json['is_verified'] as bool? ?? false,
       isActive: json['is_active'] as bool? ?? true,
+      emailVerified: json['email_verified'] as bool? ?? false,
     );
   }
 
@@ -62,6 +65,7 @@ class UserModel {
         'created_at': createdAt.toIso8601String(),
         'is_verified': isVerified,
         'is_active': isActive,
+        'email_verified': emailVerified,
       };
 
   UserModel copyWith({

@@ -115,7 +115,8 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
             final dest = _role == UserRole.provider
                 ? '/setup-provider'
                 : '/setup-client';
-            context.go(dest);
+            final email = Uri.encodeComponent(_emailCtrl.text.trim());
+            context.go('/verify-email?email=$email&next=$dest');
           } else {
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(

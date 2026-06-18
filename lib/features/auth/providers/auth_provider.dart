@@ -10,6 +10,11 @@ final authStateProvider = StreamProvider<User?>((ref) {
   return SupabaseService.authStateChanges.map((s) => s.session?.user);
 });
 
+// ─── Rol sincrónico del usuario actual (para el router) ──────────────────────
+final userRoleProvider = Provider<UserRole?>((ref) {
+  return ref.watch(currentUserProvider).valueOrNull?.role;
+});
+
 // ─── Perfil del usuario actual ────────────────────────────────────────────────
 final currentUserProvider = FutureProvider<UserModel?>((ref) async {
   // Modo demo: devuelve el usuario demo sin tocar Supabase
@@ -146,6 +151,36 @@ class AuthController extends StateNotifier<AsyncValue<void>> {
     } catch (e, st) {
       state = AsyncValue.error(e, st);
     }
+  }
+
+  // ── Verificación de email por OTP ───────────────────────────────────────────
+
+  /// Envía un código de 6 dígitos al correo del usuario.
+  Future<void> sendEmailOtp(String email) async {
+    await SupabaseService.client.auth.signInWithOtp(
+      email: email,
+      shouldCreateUser: false,
+    );
+  }
+
+  /// Verifica el código OTP ingresado y marca el perfil como email_verified.
+  Future<void> verifyEmailOtp({
+    required String email,
+    required String token,
+  }) async {
+    await SupabaseService.client.auth.verifyOTP(
+      email: email,
+      token: token,
+      type: OtpType.email,
+    );
+    final user = SupabaseService.currentUser;
+    if (user != null) {
+      await SupabaseService.client
+          .from('profiles')
+          .update({'email_verified': true})
+          .eq('id', user.id);
+    }
+    _ref.invalidate(currentUserProvider);
   }
 
   // ── Logout ──────────────────────────────────────────────────────────────────
