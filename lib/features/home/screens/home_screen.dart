@@ -414,54 +414,70 @@ class _CategoriesGrid extends StatelessWidget {
   }
 }
 
-class _CategoryChip extends StatelessWidget {
+class _CategoryChip extends StatefulWidget {
   final ServiceCategory category;
   final VoidCallback onTap;
   const _CategoryChip({required this.category, required this.onTap});
 
   @override
+  State<_CategoryChip> createState() => _CategoryChipState();
+}
+
+class _CategoryChipState extends State<_CategoryChip> {
+  bool _pressed = false;
+
+  @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: onTap,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          // Ícono Material (más profesional)
-          Container(
-            width: 58,
-            height: 58,
-            decoration: BoxDecoration(
-              color: category.backgroundColor,
-              borderRadius: BorderRadius.circular(18),
-              boxShadow: [
-                BoxShadow(
-                  color: category.color.withValues(alpha: 0.15),
-                  blurRadius: 10,
-                  offset: const Offset(0, 3),
-                ),
-              ],
+      onTap: widget.onTap,
+      onTapDown: (_) => setState(() => _pressed = true),
+      onTapUp: (_) => setState(() => _pressed = false),
+      onTapCancel: () => setState(() => _pressed = false),
+      child: AnimatedScale(
+        scale: _pressed ? 0.93 : 1.0,
+        duration: const Duration(milliseconds: 110),
+        curve: Curves.easeInOut,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            AnimatedContainer(
+              duration: const Duration(milliseconds: 110),
+              width: 58,
+              height: 58,
+              decoration: BoxDecoration(
+                color: widget.category.backgroundColor,
+                borderRadius: BorderRadius.circular(18),
+                boxShadow: _pressed
+                    ? null
+                    : [
+                        BoxShadow(
+                          color: widget.category.color.withValues(alpha: 0.18),
+                          blurRadius: 12,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+              ),
+              child: Icon(
+                widget.category.icon,
+                size: 26,
+                color: widget.category.color,
+              ),
             ),
-            child: Icon(
-              category.icon,
-              size: 26,
-              color: category.color,
+            const SizedBox(height: 7),
+            Text(
+              widget.category.name,
+              style: const TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w500,
+                color: AppColors.textSecondary,
+                height: 1.2,
+              ),
+              textAlign: TextAlign.center,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
             ),
-          ),
-          const SizedBox(height: 7),
-          // Nombre completo — hasta 2 líneas
-          Text(
-            category.name,
-            style: const TextStyle(
-              fontSize: 11,
-              fontWeight: FontWeight.w500,
-              color: AppColors.textSecondary,
-              height: 1.2,
-            ),
-            textAlign: TextAlign.center,
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

@@ -68,10 +68,11 @@ class FeaturedProvidersSection extends ConsumerWidget {
                 scrollDirection: Axis.horizontal,
                 itemCount: featured.length,
                 separatorBuilder: (_, __) => const SizedBox(width: 12),
-                itemBuilder: (_, i) => ProviderCard(
-                  provider: featured[i],
-                  onTap: () => context.push(
-                    '/provider/${featured[i].id}',
+                itemBuilder: (_, i) => _FadeInCard(
+                  delay: Duration(milliseconds: i * 60),
+                  child: ProviderCard(
+                    provider: featured[i],
+                    onTap: () => context.push('/provider/${featured[i].id}'),
                   ),
                 ),
               ),
@@ -96,6 +97,54 @@ class _ProviderShimmer extends StatelessWidget {
           borderRadius: BorderRadius.circular(16),
         ),
       ),
+    );
+  }
+}
+
+// Wrapper que hace aparecer su hijo con fade + slide escalonado
+class _FadeInCard extends StatefulWidget {
+  final Widget child;
+  final Duration delay;
+
+  const _FadeInCard({required this.child, required this.delay});
+
+  @override
+  State<_FadeInCard> createState() => _FadeInCardState();
+}
+
+class _FadeInCardState extends State<_FadeInCard>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _ctrl;
+  late final Animation<double> _fade;
+  late final Animation<Offset> _slide;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 350),
+    );
+    _fade = CurvedAnimation(parent: _ctrl, curve: Curves.easeOut);
+    _slide = Tween(begin: const Offset(0, 0.08), end: Offset.zero)
+        .animate(CurvedAnimation(parent: _ctrl, curve: Curves.easeOut));
+
+    Future.delayed(widget.delay, () {
+      if (mounted) _ctrl.forward();
+    });
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return SlideTransition(
+      position: _slide,
+      child: FadeTransition(opacity: _fade, child: widget.child),
     );
   }
 }

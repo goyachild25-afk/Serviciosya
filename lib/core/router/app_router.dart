@@ -33,6 +33,60 @@ import '../../features/onboarding_flow/screens/provider_onboarding_screen.dart';
 import '../../features/booking/screens/service_request_screen.dart';
 import '../../features/booking/screens/searching_provider_screen.dart';
 
+// ── Transition helpers ────────────────────────────────────────────────────────
+
+/// Fade suave para pantallas raíz (splash, home, dashboard, login).
+CustomTransitionPage<void> _fadePage(LocalKey key, Widget child) =>
+    CustomTransitionPage<void>(
+      key: key,
+      child: child,
+      transitionDuration: const Duration(milliseconds: 280),
+      reverseTransitionDuration: const Duration(milliseconds: 220),
+      transitionsBuilder: (_, animation, __, child) => FadeTransition(
+        opacity: CurvedAnimation(parent: animation, curve: Curves.easeOut),
+        child: child,
+      ),
+    );
+
+/// Slide-fade lateral para pantallas de detalle (push hacia adelante).
+CustomTransitionPage<void> _slidePage(LocalKey key, Widget child) =>
+    CustomTransitionPage<void>(
+      key: key,
+      child: child,
+      transitionDuration: const Duration(milliseconds: 320),
+      reverseTransitionDuration: const Duration(milliseconds: 270),
+      transitionsBuilder: (_, animation, __, child) {
+        final slide = animation.drive(
+          Tween(begin: const Offset(0.05, 0.0), end: Offset.zero)
+              .chain(CurveTween(curve: Curves.easeOutCubic)),
+        );
+        final fade =
+            CurvedAnimation(parent: animation, curve: const Interval(0.0, 0.6, curve: Curves.easeOut));
+        return FadeTransition(
+          opacity: fade,
+          child: SlideTransition(position: slide, child: child),
+        );
+      },
+    );
+
+/// Slide-up para modales/pantallas de fondo (payment, report, terms).
+CustomTransitionPage<void> _slideUpPage(LocalKey key, Widget child) =>
+    CustomTransitionPage<void>(
+      key: key,
+      child: child,
+      transitionDuration: const Duration(milliseconds: 380),
+      reverseTransitionDuration: const Duration(milliseconds: 300),
+      transitionsBuilder: (_, animation, __, child) => SlideTransition(
+        position: animation.drive(
+          Tween(begin: const Offset(0.0, 1.0), end: Offset.zero)
+              .chain(CurveTween(curve: Curves.easeOutQuart)),
+        ),
+        child: child,
+      ),
+    );
+
+// ── Router provider ───────────────────────────────────────────────────────────
+
 final routerProvider = Provider<GoRouter>((ref) {
   final authState = ref.watch(authStateProvider);
 
@@ -49,7 +103,6 @@ final routerProvider = Provider<GoRouter>((ref) {
       ];
       final isPublic = publicPaths.any((p) => path.startsWith(p));
 
-      // En modo demo siempre permitir acceso
       if (isDemo) return null;
 
       if (!isLoggedIn && !isPublic) return '/login';
@@ -59,192 +112,238 @@ final routerProvider = Provider<GoRouter>((ref) {
       return null;
     },
     routes: [
+      // ── Auth & raíz ────────────────────────────────────────────────────────
       GoRoute(
         path: '/',
-        builder: (_, __) => const SplashScreen(),
+        pageBuilder: (_, state) => _fadePage(state.pageKey, const SplashScreen()),
       ),
       GoRoute(
         path: '/onboarding',
-        builder: (_, __) => const OnboardingScreen(),
+        pageBuilder: (_, state) =>
+            _fadePage(state.pageKey, const OnboardingScreen()),
       ),
       GoRoute(
         path: '/login',
-        builder: (_, __) => const LoginScreen(),
+        pageBuilder: (_, state) => _fadePage(state.pageKey, const LoginScreen()),
       ),
       GoRoute(
         path: '/forgot-password',
-        builder: (_, __) => const ForgotPasswordScreen(),
+        pageBuilder: (_, state) =>
+            _slidePage(state.pageKey, const ForgotPasswordScreen()),
       ),
       GoRoute(
         path: '/register',
-        builder: (context, state) {
+        pageBuilder: (context, state) {
           final role = state.uri.queryParameters['role'] ?? 'client';
-          return RegisterScreen(role: role);
+          return _slidePage(state.pageKey, RegisterScreen(role: role));
         },
       ),
       GoRoute(
-        path: '/home',
-        builder: (_, __) => const HomeScreen(),
+        path: '/setup-client',
+        pageBuilder: (_, state) =>
+            _fadePage(state.pageKey, const ClientOnboardingScreen()),
       ),
       GoRoute(
+        path: '/setup-provider',
+        pageBuilder: (_, state) =>
+            _fadePage(state.pageKey, const ProviderOnboardingScreen()),
+      ),
+
+      // ── Pantallas principales ───────────────────────────────────────────────
+      GoRoute(
+        path: '/home',
+        pageBuilder: (_, state) => _fadePage(state.pageKey, const HomeScreen()),
+      ),
+      GoRoute(
+        path: '/dashboard',
+        pageBuilder: (_, state) =>
+            _fadePage(state.pageKey, const ProviderDashboardScreen()),
+      ),
+      GoRoute(
+        path: '/admin',
+        pageBuilder: (_, state) =>
+            _fadePage(state.pageKey, const AdminDashboardScreen()),
+      ),
+
+      // ── Prestadores ────────────────────────────────────────────────────────
+      GoRoute(
         path: '/providers',
-        builder: (context, state) {
-          final categoryId = state.uri.queryParameters['category'];
-          // state.uri.queryParameters already percent-decodes values
-          final categoryName = state.uri.queryParameters['name'];
-          final filterNotes = state.uri.queryParameters['notes'];
-          return ProvidersListScreen(
-            categoryId: categoryId,
-            categoryName: categoryName,
-            filterNotes: filterNotes,
+        pageBuilder: (context, state) {
+          final p = state.uri.queryParameters;
+          return _slidePage(
+            state.pageKey,
+            ProvidersListScreen(
+              categoryId: p['category'],
+              categoryName: p['name'],
+              filterNotes: p['notes'],
+            ),
           );
         },
       ),
       GoRoute(
         path: '/provider/:id',
-        builder: (context, state) {
-          return ProviderProfileScreen(
-            providerId: state.pathParameters['id']!,
-          );
-        },
-      ),
-      GoRoute(
-        path: '/booking/:providerId',
-        builder: (context, state) {
-          return BookingScreen(
-            providerId: state.pathParameters['providerId']!,
-          );
-        },
-      ),
-      GoRoute(
-        path: '/booking-confirmation',
-        builder: (_, __) => const BookingConfirmationScreen(),
-      ),
-      GoRoute(
-        path: '/payment',
-        builder: (context, state) {
-          final params = state.uri.queryParameters;
-          return PaymentScreen(
-            bookingId: params['bookingId'] ?? '',
-            amount: double.tryParse(params['amount'] ?? '0') ?? 0,
-            serviceName: params['service'] ?? '',
-            providerName: params['provider'] ?? '',
-            currency: params['currency'] ?? 'dop',
-          );
-        },
-      ),
-      GoRoute(
-        path: '/bookings',
-        builder: (_, __) => const ClientBookingsScreen(),
-      ),
-      GoRoute(
-        path: '/dashboard',
-        builder: (_, __) => const ProviderDashboardScreen(),
-      ),
-      GoRoute(
-        path: '/profile',
-        builder: (_, __) => const ProfileScreen(),
-      ),
-      GoRoute(
-        path: '/search',
-        builder: (_, __) => const ProvidersListScreen(),
-      ),
-      GoRoute(
-        path: '/chat/:bookingId',
-        builder: (context, state) => ChatScreen(
-          bookingId: state.pathParameters['bookingId']!,
-          otherUserName: state.uri.queryParameters['name'] ?? 'Usuario',
-          serviceName: state.uri.queryParameters['service'] ?? 'Servicio',
-          isProvider: state.uri.queryParameters['provider'] == 'true',
+        pageBuilder: (context, state) => _slidePage(
+          state.pageKey,
+          ProviderProfileScreen(providerId: state.pathParameters['id']!),
         ),
       ),
       GoRoute(
-        path: '/admin',
-        builder: (_, __) => const AdminDashboardScreen(),
+        path: '/search',
+        pageBuilder: (_, state) =>
+            _slidePage(state.pageKey, const ProvidersListScreen()),
       ),
-      GoRoute(
-        path: '/verify-identity',
-        builder: (_, __) => const ProviderVerificationScreen(),
-      ),
-      GoRoute(
-        path: '/my-services',
-        builder: (_, __) => const ProviderServicesScreen(),
-      ),
-      GoRoute(
-        path: '/notifications',
-        builder: (_, __) => const NotificationsScreen(),
-      ),
-      GoRoute(
-        path: '/change-password',
-        builder: (_, __) => const ChangePasswordScreen(),
-      ),
-      GoRoute(
-        path: '/help',
-        builder: (_, __) => const HelpScreen(),
-      ),
-      GoRoute(
-        path: '/terms',
-        builder: (context, state) {
-          final mustAccept =
-              state.uri.queryParameters['accept'] == 'true';
-          return TermsScreen(mustAccept: mustAccept);
-        },
-      ),
-      GoRoute(
-        path: '/report',
-        builder: (context, state) {
-          final p = state.uri.queryParameters;
-          return ReportDisputeScreen(
-            bookingId: p['bookingId'] ?? '',
-            reportedUserId: p['userId'] ?? '',
-            reportedUserName: p['userName'] ?? 'Usuario',
-            serviceName: p['service'] ?? 'Servicio',
-          );
-        },
-      ),
+
+      // ── Booking & servicios ────────────────────────────────────────────────
       GoRoute(
         path: '/category-filter',
-        builder: (context, state) {
+        pageBuilder: (context, state) {
           final categoryId = state.uri.queryParameters['category'] ?? '';
-          return CategoryFilterScreen(categoryId: categoryId);
-        },
-      ),
-      GoRoute(
-        path: '/setup-client',
-        builder: (_, __) => const ClientOnboardingScreen(),
-      ),
-      GoRoute(
-        path: '/setup-provider',
-        builder: (_, __) => const ProviderOnboardingScreen(),
-      ),
-      GoRoute(
-        path: '/rate-client',
-        builder: (context, state) {
-          final p = state.uri.queryParameters;
-          return RateClientScreen(
-            bookingId: p['bookingId'] ?? '',
-            clientId: p['clientId'] ?? '',
-            clientName: p['clientName'] ?? 'Cliente',
-            serviceName: p['service'] ?? 'Servicio',
-          );
+          return _slidePage(
+              state.pageKey, CategoryFilterScreen(categoryId: categoryId));
         },
       ),
       GoRoute(
         path: '/service-request',
-        builder: (context, state) {
+        pageBuilder: (context, state) {
           final p = state.uri.queryParameters;
-          return ServiceRequestScreen(
-            categoryId: p['category'] ?? '',
-            categoryName: p['name'] ?? 'Servicio',
-            filterNotes: p['notes'],
+          return _slidePage(
+            state.pageKey,
+            ServiceRequestScreen(
+              categoryId: p['category'] ?? '',
+              categoryName: p['name'] ?? 'Servicio',
+              filterNotes: p['notes'],
+            ),
           );
         },
       ),
       GoRoute(
         path: '/searching/:bookingId',
-        builder: (context, state) => SearchingProviderScreen(
-          bookingId: state.pathParameters['bookingId']!,
+        pageBuilder: (context, state) => _fadePage(
+          state.pageKey,
+          SearchingProviderScreen(
+              bookingId: state.pathParameters['bookingId']!),
         ),
+      ),
+      GoRoute(
+        path: '/booking/:providerId',
+        pageBuilder: (context, state) => _slidePage(
+          state.pageKey,
+          BookingScreen(providerId: state.pathParameters['providerId']!),
+        ),
+      ),
+      GoRoute(
+        path: '/booking-confirmation',
+        pageBuilder: (_, state) =>
+            _fadePage(state.pageKey, const BookingConfirmationScreen()),
+      ),
+      GoRoute(
+        path: '/bookings',
+        pageBuilder: (_, state) =>
+            _slidePage(state.pageKey, const ClientBookingsScreen()),
+      ),
+
+      // ── Modales / pantallas de fondo ───────────────────────────────────────
+      GoRoute(
+        path: '/payment',
+        pageBuilder: (context, state) {
+          final p = state.uri.queryParameters;
+          return _slideUpPage(
+            state.pageKey,
+            PaymentScreen(
+              bookingId: p['bookingId'] ?? '',
+              amount: double.tryParse(p['amount'] ?? '0') ?? 0,
+              serviceName: p['service'] ?? '',
+              providerName: p['provider'] ?? '',
+              currency: p['currency'] ?? 'dop',
+            ),
+          );
+        },
+      ),
+      GoRoute(
+        path: '/terms',
+        pageBuilder: (context, state) {
+          final mustAccept = state.uri.queryParameters['accept'] == 'true';
+          return _slideUpPage(
+              state.pageKey, TermsScreen(mustAccept: mustAccept));
+        },
+      ),
+      GoRoute(
+        path: '/report',
+        pageBuilder: (context, state) {
+          final p = state.uri.queryParameters;
+          return _slideUpPage(
+            state.pageKey,
+            ReportDisputeScreen(
+              bookingId: p['bookingId'] ?? '',
+              reportedUserId: p['userId'] ?? '',
+              reportedUserName: p['userName'] ?? 'Usuario',
+              serviceName: p['service'] ?? 'Servicio',
+            ),
+          );
+        },
+      ),
+      GoRoute(
+        path: '/rate-client',
+        pageBuilder: (context, state) {
+          final p = state.uri.queryParameters;
+          return _slideUpPage(
+            state.pageKey,
+            RateClientScreen(
+              bookingId: p['bookingId'] ?? '',
+              clientId: p['clientId'] ?? '',
+              clientName: p['clientName'] ?? 'Cliente',
+              serviceName: p['service'] ?? 'Servicio',
+            ),
+          );
+        },
+      ),
+
+      // ── Usuario & perfil ───────────────────────────────────────────────────
+      GoRoute(
+        path: '/profile',
+        pageBuilder: (_, state) =>
+            _slidePage(state.pageKey, const ProfileScreen()),
+      ),
+      GoRoute(
+        path: '/change-password',
+        pageBuilder: (_, state) =>
+            _slidePage(state.pageKey, const ChangePasswordScreen()),
+      ),
+      GoRoute(
+        path: '/help',
+        pageBuilder: (_, state) =>
+            _slidePage(state.pageKey, const HelpScreen()),
+      ),
+
+      // ── Chat & notificaciones ──────────────────────────────────────────────
+      GoRoute(
+        path: '/chat/:bookingId',
+        pageBuilder: (context, state) => _slidePage(
+          state.pageKey,
+          ChatScreen(
+            bookingId: state.pathParameters['bookingId']!,
+            otherUserName: state.uri.queryParameters['name'] ?? 'Usuario',
+            serviceName: state.uri.queryParameters['service'] ?? 'Servicio',
+            isProvider: state.uri.queryParameters['provider'] == 'true',
+          ),
+        ),
+      ),
+      GoRoute(
+        path: '/notifications',
+        pageBuilder: (_, state) =>
+            _slidePage(state.pageKey, const NotificationsScreen()),
+      ),
+
+      // ── Prestador (dashboard interno) ──────────────────────────────────────
+      GoRoute(
+        path: '/verify-identity',
+        pageBuilder: (_, state) =>
+            _slidePage(state.pageKey, const ProviderVerificationScreen()),
+      ),
+      GoRoute(
+        path: '/my-services',
+        pageBuilder: (_, state) =>
+            _slidePage(state.pageKey, const ProviderServicesScreen()),
       ),
     ],
     errorBuilder: (context, state) => Scaffold(
@@ -252,7 +351,8 @@ final routerProvider = Provider<GoRouter>((ref) {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Text('Página no encontrada', style: TextStyle(fontSize: 18)),
+            const Text('Página no encontrada',
+                style: TextStyle(fontSize: 18)),
             const SizedBox(height: 16),
             ElevatedButton(
               onPressed: () => context.go('/home'),

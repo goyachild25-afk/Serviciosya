@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
+import 'package:shimmer/shimmer.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/services/supabase_service.dart';
 import '../../../core/services/demo_provider.dart';
@@ -72,7 +73,7 @@ class ProviderDashboardScreen extends ConsumerWidget {
             const SizedBox(height: 16),
             bookingsAsync.when(
               data: (bookings) => _buildStats(bookings),
-              loading: () => const Center(child: CircularProgressIndicator()),
+              loading: () => const _StatsSkeletonRow(),
               error: (_, __) => const SizedBox(),
             ),
             const SizedBox(height: 24),
@@ -98,22 +99,23 @@ class ProviderDashboardScreen extends ConsumerWidget {
             ),
             const SizedBox(height: 12),
             bookingsAsync.when(
-              loading: () => const Center(
-                child: Padding(
-                  padding: EdgeInsets.all(32),
-                  child: CircularProgressIndicator(),
-                ),
-              ),
+              loading: () => const _BookingsSkeletonList(),
               error: (e, _) => Center(child: Text('Error: $e')),
               data: (bookings) {
                 if (bookings.isEmpty) {
                   return _buildEmptyBookings();
                 }
+                final list = bookings.take(10).toList();
                 return Column(
-                  children: bookings
-                      .take(10)
-                      .map((b) => _BookingRequestCard(booking: b))
-                      .toList(),
+                  children: list.asMap().entries.map((entry) {
+                    return _StaggeredCard(
+                      delay: Duration(milliseconds: entry.key * 55),
+                      child: Padding(
+                        padding: const EdgeInsets.only(bottom: 12),
+                        child: _BookingRequestCard(booking: entry.value),
+                      ),
+                    );
+                  }).toList(),
                 );
               },
             ),
@@ -1184,6 +1186,107 @@ class _SetupPrompt extends ConsumerWidget {
           ),
         );
       },
+    );
+  }
+}
+
+// ── Skeleton loaders ──────────────────────────────────────────────────────────
+
+class _StatsSkeletonRow extends StatelessWidget {
+  const _StatsSkeletonRow();
+
+  @override
+  Widget build(BuildContext context) {
+    return Shimmer.fromColors(
+      baseColor: Colors.grey.shade200,
+      highlightColor: Colors.grey.shade100,
+      child: Row(
+        children: List.generate(3, (i) {
+          return Expanded(
+            child: Container(
+              height: 88,
+              margin: EdgeInsets.only(right: i < 2 ? 10 : 0),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(16),
+              ),
+            ),
+          );
+        }),
+      ),
+    );
+  }
+}
+
+class _BookingsSkeletonList extends StatelessWidget {
+  const _BookingsSkeletonList();
+
+  @override
+  Widget build(BuildContext context) {
+    return Shimmer.fromColors(
+      baseColor: Colors.grey.shade200,
+      highlightColor: Colors.grey.shade100,
+      child: Column(
+        children: List.generate(3, (_) {
+          return Container(
+            height: 120,
+            margin: const EdgeInsets.only(bottom: 12),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+            ),
+          );
+        }),
+      ),
+    );
+  }
+}
+
+// ── Animación de entrada escalonada ───────────────────────────────────────────
+
+class _StaggeredCard extends StatefulWidget {
+  final Widget child;
+  final Duration delay;
+
+  const _StaggeredCard({required this.child, required this.delay});
+
+  @override
+  State<_StaggeredCard> createState() => _StaggeredCardState();
+}
+
+class _StaggeredCardState extends State<_StaggeredCard>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _ctrl;
+  late final Animation<double> _fade;
+  late final Animation<Offset> _slide;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 320),
+    );
+    _fade = CurvedAnimation(parent: _ctrl, curve: Curves.easeOut);
+    _slide = Tween(begin: const Offset(0, 0.06), end: Offset.zero)
+        .animate(CurvedAnimation(parent: _ctrl, curve: Curves.easeOut));
+
+    Future.delayed(widget.delay, () {
+      if (mounted) _ctrl.forward();
+    });
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return SlideTransition(
+      position: _slide,
+      child: FadeTransition(opacity: _fade, child: widget.child),
     );
   }
 }

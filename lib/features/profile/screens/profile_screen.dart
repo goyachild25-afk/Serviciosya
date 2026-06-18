@@ -1,6 +1,7 @@
 import 'dart:typed_data';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:shimmer/shimmer.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
@@ -175,7 +176,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         ],
       ),
       body: userAsync.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
+        loading: () => const _ProfileSkeleton(),
         error: (e, _) => Center(child: Text('Error: $e')),
         data: (user) {
           if (user == null) {
@@ -192,11 +193,31 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                   const SizedBox(height: 24),
                   _buildRoleBadge(user),
                   const SizedBox(height: 24),
-                  if (_isEditing) ...[
-                    _buildEditForm(user),
-                  ] else ...[
-                    _buildProfileInfo(user),
-                  ],
+                  AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 280),
+                    transitionBuilder: (child, animation) => FadeTransition(
+                      opacity: animation,
+                      child: SlideTransition(
+                        position: Tween(
+                          begin: const Offset(0, 0.04),
+                          end: Offset.zero,
+                        ).animate(CurvedAnimation(
+                          parent: animation,
+                          curve: Curves.easeOut,
+                        )),
+                        child: child,
+                      ),
+                    ),
+                    child: _isEditing
+                        ? KeyedSubtree(
+                            key: const ValueKey('edit'),
+                            child: _buildEditForm(user),
+                          )
+                        : KeyedSubtree(
+                            key: const ValueKey('view'),
+                            child: _buildProfileInfo(user),
+                          ),
+                  ),
                   const SizedBox(height: 32),
                   _buildActions(user),
                 ],
@@ -488,6 +509,62 @@ class _ActionTile extends StatelessWidget {
       trailing: const Icon(Icons.chevron_right, color: AppColors.textHint),
       onTap: onTap,
       contentPadding: const EdgeInsets.symmetric(horizontal: 4),
+    );
+  }
+}
+
+// ── Skeleton de carga del perfil ──────────────────────────────────────────────
+class _ProfileSkeleton extends StatelessWidget {
+  const _ProfileSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    return Shimmer.fromColors(
+      baseColor: Colors.grey.shade200,
+      highlightColor: Colors.grey.shade100,
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Avatar
+            Center(
+              child: Container(
+                width: 104,
+                height: 104,
+                decoration: const BoxDecoration(
+                  color: Colors.white,
+                  shape: BoxShape.circle,
+                ),
+              ),
+            ),
+            const SizedBox(height: 24),
+            // Rol badge
+            Center(
+              child: Container(
+                width: 120,
+                height: 28,
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(14),
+                ),
+              ),
+            ),
+            const SizedBox(height: 24),
+            // Campos de perfil
+            ...List.generate(4, (_) => Padding(
+              padding: const EdgeInsets.only(bottom: 16),
+              child: Container(
+                height: 56,
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(14),
+                ),
+              ),
+            )),
+          ],
+        ),
+      ),
     );
   }
 }
