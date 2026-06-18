@@ -102,9 +102,9 @@ final routerProvider = Provider<GoRouter>((ref) {
 
       final publicPaths = [
         '/', '/onboarding', '/login', '/register',
-        '/setup-client', '/setup-provider', '/verify-email',
+        '/setup-client', '/setup-provider', '/verify-email', '/forgot-password',
       ];
-      final isPublic = publicPaths.any((p) => path.startsWith(p));
+      final isPublic = publicPaths.contains(path);
 
       if (isDemo) return null;
 

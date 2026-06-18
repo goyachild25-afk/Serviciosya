@@ -175,10 +175,15 @@ class AuthController extends StateNotifier<AsyncValue<void>> {
     );
     final user = SupabaseService.currentUser;
     if (user != null) {
-      await SupabaseService.client
-          .from('profiles')
-          .update({'email_verified': true})
-          .eq('id', user.id);
+      try {
+        await SupabaseService.client
+            .from('profiles')
+            .update({'email_verified': true})
+            .eq('id', user.id);
+      } catch (_) {
+        // Best-effort: si la columna aún no existe, la migración está pendiente.
+        // La verificación del OTP ya fue exitosa; la navegación continúa.
+      }
     }
     _ref.invalidate(currentUserProvider);
   }

@@ -44,7 +44,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       final state = ref.read(authControllerProvider);
       state.whenOrNull(
         error: (e, _) => _showError(e.toString()),
-        data: (_) => _navigateAfterLogin(),
+        data: (_) { _navigateAfterLogin(); },
       );
     }
   }
@@ -53,7 +53,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     if (!mounted) return;
     final user = SupabaseService.currentUser;
     if (user == null) {
-      context.go('/home');
+      _showError('Error de autenticación. Inténtalo de nuevo.');
       return;
     }
     // Check if onboarding has been completed
