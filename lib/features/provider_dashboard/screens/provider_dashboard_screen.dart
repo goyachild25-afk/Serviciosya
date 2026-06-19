@@ -216,6 +216,7 @@ class _ActivityMapSectionState extends State<_ActivityMapSection>
                 animation: _pulseCtrl,
                 builder: (_, __) => CustomPaint(
                   painter: _DRMapPainter(counts, _pulseCtrl.value),
+                  size: Size.infinite,
                 ),
               ),
             ),
@@ -762,27 +763,66 @@ class _OpenRequestCardState extends State<_OpenRequestCard>
                       _InfoRow(icon: Icons.note_outlined, text: notes, maxLines: 2),
                     ],
                     const SizedBox(height: 14),
-                    SizedBox(
-                      width: double.infinity,
-                      child: ElevatedButton.icon(
-                        icon: _accepting
-                            ? const SizedBox(width: 16, height: 16,
-                                child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                            : const Icon(Icons.check_circle_outline, size: 18),
-                        label: Text(_accepting ? 'Aceptando…' : 'Aceptar solicitud'),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.success, foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(vertical: 12),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                          textStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
+                    Row(children: [
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          icon: const Icon(Icons.close_outlined, size: 18),
+                          label: const Text('Rechazar'),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: AppColors.error,
+                            side: const BorderSide(color: AppColors.error),
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          ),
+                          onPressed: _accepting ? null : () async {
+                            setState(() => _accepting = true);
+                            try {
+                              await SupabaseService.client
+                                  .from('bookings')
+                                  .delete()
+                                  .eq('id', widget.request['id'] as String);
+                              if (mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text('Solicitud rechazada'),
+                                    backgroundColor: AppColors.error,
+                                  ),
+                                );
+                              }
+                            } catch (e) {
+                              if (mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(content: Text('Error: $e')),
+                                );
+                              }
+                            } finally {
+                              if (mounted) setState(() => _accepting = false);
+                            }
+                          },
                         ),
-                        onPressed: _accepting ? null : () async {
-                          setState(() => _accepting = true);
-                          await widget.onAccept();
-                          if (mounted) setState(() => _accepting = false);
-                        },
                       ),
-                    ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: ElevatedButton.icon(
+                          icon: _accepting
+                              ? const SizedBox(width: 16, height: 16,
+                                  child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                              : const Icon(Icons.check_circle_outline, size: 18),
+                          label: Text(_accepting ? 'Aceptando…' : 'Aceptar'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.success, foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            textStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
+                          ),
+                          onPressed: _accepting ? null : () async {
+                            setState(() => _accepting = true);
+                            await widget.onAccept();
+                            if (mounted) setState(() => _accepting = false);
+                          },
+                        ),
+                      ),
+                    ]),
                   ],
                 ),
               ),

@@ -52,7 +52,7 @@ class _ServiceRequestScreenState extends ConsumerState<ServiceRequestScreen> {
       await Future.delayed(const Duration(milliseconds: 600));
       if (mounted) {
         setState(() => _isLoading = false);
-        context.pushReplacement(
+        context.push(
             '/searching/book-${DateTime.now().millisecondsSinceEpoch}');
       }
       return;
@@ -98,7 +98,7 @@ class _ServiceRequestScreenState extends ConsumerState<ServiceRequestScreen> {
           .single();
 
       if (mounted) {
-        context.pushReplacement('/searching/${inserted['id']}');
+        context.push('/searching/${inserted['id']}');
       }
     } catch (e) {
       if (mounted) {
