@@ -45,14 +45,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
       context.go('/onboarding');
       return;
     }
-    // Returning user — check if they completed onboarding
-    final done = await isOnboardingComplete(user.id);
-    if (!mounted) return;
-    if (done) {
-      context.go('/home');
-      return;
-    }
-    // Onboarding not done — check role and redirect
+    // Get user role for navigation
     try {
       final profile = await SupabaseService.client
           .from('profiles')
@@ -61,6 +54,17 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
           .maybeSingle();
       final role = profile?['role'] as String? ?? 'client';
       if (!mounted) return;
+
+      // Check if they completed onboarding
+      final done = await isOnboardingComplete(user.id);
+      if (!mounted) return;
+
+      if (done) {
+        // Go to correct dashboard based on role
+        context.go(role == 'provider' ? '/dashboard' : '/home');
+        return;
+      }
+      // Onboarding not done — redirect to setup
       context.go(role == 'provider' ? '/setup-provider' : '/setup-client');
     } catch (_) {
       if (mounted) context.go('/home');
