@@ -528,13 +528,14 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
 
   Widget _buildDemoMessages(String currentUserId) {
     if (_demoLocalMessages.isEmpty) return _buildEmptyChat();
+    final reversedMessages = List.from(_demoLocalMessages.reversed);
     WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToBottom());
     return ListView.builder(
       controller: _scrollCtrl,
       padding: const EdgeInsets.fromLTRB(12, 16, 12, 12),
-      itemCount: _demoLocalMessages.length,
+      itemCount: reversedMessages.length,
       itemBuilder: (_, i) {
-        final msg = _demoLocalMessages[_demoLocalMessages.length - 1 - i];
+        final msg = reversedMessages[i];
         return Padding(
           padding: const EdgeInsets.symmetric(vertical: 4),
           child: _MessageBubble(
@@ -558,13 +559,14 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       error: (e, _) => Center(child: Text('Error: $e')),
       data: (messages) {
         if (messages.isEmpty) return _buildEmptyChat();
+        final reversedMessages = List.from(messages.reversed);
         WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToBottom());
         return ListView.builder(
           controller: _scrollCtrl,
           padding: const EdgeInsets.fromLTRB(12, 16, 12, 12),
-          itemCount: messages.length,
+          itemCount: reversedMessages.length,
           itemBuilder: (_, i) {
-            final msg = messages[messages.length - 1 - i];
+            final msg = reversedMessages[i];
             return Padding(
               padding: const EdgeInsets.symmetric(vertical: 4),
               child: _MessageBubble(
