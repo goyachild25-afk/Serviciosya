@@ -659,8 +659,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
             onTap: _send,
             child: AnimatedContainer(
               duration: const Duration(milliseconds: 200),
-              width: 48,
-              height: 48,
+              width: 52,
+              height: 52,
               decoration: BoxDecoration(
                 gradient: _textCtrl.text.isEmpty
                     ? LinearGradient(colors: [AppColors.primary.withValues(alpha: 0.5), AppColors.primary.withValues(alpha: 0.3)])
@@ -683,7 +683,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                   : Icon(
                       _textCtrl.text.isEmpty ? Icons.add_rounded : Icons.send_rounded,
                       color: Colors.white,
-                      size: 22),
+                      size: 24),
             ),
           ),
         ],
