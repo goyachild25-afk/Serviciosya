@@ -1,4 +1,5 @@
 import 'package:shared_preferences/shared_preferences.dart';
+import '../../../core/services/supabase_service.dart';
 
 // ─── Provincias de República Dominicana (32) ──────────────────────────────────
 const List<String> kProvinciasRD = [
@@ -146,8 +147,30 @@ const String _kOnboardingDonePrefix = 'onboarding_done_';
 const String _kVerificationSubmittedPrefix = 'verification_submitted_';
 
 Future<bool> isOnboardingComplete(String userId) async {
+  // Check local cache first (fast)
   final prefs = await SharedPreferences.getInstance();
-  return prefs.getBool('$_kOnboardingDonePrefix$userId') ?? false;
+  if (prefs.getBool('$_kOnboardingDonePrefix$userId') ?? false) {
+    return true;
+  }
+
+  // If not in cache, check Supabase (source of truth for web)
+  try {
+    final profile = await SupabaseService.client
+        .from('profiles')
+        .select('id')
+        .eq('id', userId)
+        .limit(1)
+        .maybeSingle();
+
+    // If profile exists, onboarding is complete
+    if (profile != null) {
+      // Update local cache for next time
+      await prefs.setBool('$_kOnboardingDonePrefix$userId', true);
+      return true;
+    }
+  } catch (_) {}
+
+  return false;
 }
 
 Future<void> markOnboardingComplete(String userId) async {
