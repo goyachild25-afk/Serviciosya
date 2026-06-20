@@ -532,10 +532,9 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     return ListView.builder(
       controller: _scrollCtrl,
       padding: const EdgeInsets.fromLTRB(12, 16, 12, 12),
-      reverse: true,
       itemCount: _demoLocalMessages.length,
       itemBuilder: (_, i) {
-        final msg = _demoLocalMessages[i];
+        final msg = _demoLocalMessages[_demoLocalMessages.length - 1 - i];
         return Padding(
           padding: const EdgeInsets.symmetric(vertical: 4),
           child: _MessageBubble(
@@ -563,10 +562,9 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         return ListView.builder(
           controller: _scrollCtrl,
           padding: const EdgeInsets.fromLTRB(12, 16, 12, 12),
-          reverse: true,
           itemCount: messages.length,
           itemBuilder: (_, i) {
-            final msg = messages[i];
+            final msg = messages[messages.length - 1 - i];
             return Padding(
               padding: const EdgeInsets.symmetric(vertical: 4),
               child: _MessageBubble(
