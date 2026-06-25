@@ -160,7 +160,13 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         title: const Text('Mi perfil'),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
-          onPressed: () => context.pop(),
+          onPressed: () {
+            if (context.canPop()) {
+              context.pop();
+            } else {
+              context.go('/home');
+            }
+          },
         ),
         actions: [
           if (!_isEditing)
