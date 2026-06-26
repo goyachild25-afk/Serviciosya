@@ -30,15 +30,45 @@
   <!-- Google Maps JS API — requerido por google_maps_flutter_web -->
   <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyA9IYxYmPtlhQgRgeJTUUM-RK1IT0o30zw" defer></script>
 
-  <!-- Auto-actualización: si hay un Service Worker nuevo, recarga una sola vez
-       para que los usuarios reciban el último deploy sin limpiar caché a mano -->
+  <!-- Auto-actualización: detecta y aplica el último deploy de forma activa,
+       sin depender de que el navegador revalide solo el index.html cacheado
+       (GitHub Pages lo sirve con cache-control: max-age=600) ni de que el
+       ciclo de vida del Service Worker se complete por sí mismo (poco fiable
+       en PWAs instaladas, sobre todo en iOS Safari). -->
   <script>
     if ('serviceWorker' in navigator) {
       let refreshing = false;
-      navigator.serviceWorker.addEventListener('controllerchange', function() {
+      const reloadOnce = function() {
         if (refreshing) return;
         refreshing = true;
         window.location.reload();
+      };
+      navigator.serviceWorker.addEventListener('controllerchange', reloadOnce);
+
+      navigator.serviceWorker.ready.then(function(registration) {
+        // Si ya hay un worker nuevo esperando (instalado pero sin activar
+        // por alguna pestaña/instancia vieja todavía abierta), pídele que
+        // tome control ahora mismo en vez de esperar.
+        if (registration.waiting) {
+          registration.waiting.postMessage({type: 'SKIP_WAITING'});
+        }
+        registration.addEventListener('updatefound', function() {
+          const newWorker = registration.installing;
+          if (!newWorker) return;
+          newWorker.addEventListener('statechange', function() {
+            if (newWorker.state === 'installed' && registration.waiting) {
+              registration.waiting.postMessage({type: 'SKIP_WAITING'});
+            }
+          });
+        });
+
+        // Fuerza una revalidación contra la red al entrar a la app y cada
+        // vez que vuelve a primer plano, en vez de confiar en que el
+        // navegador revise por su cuenta dentro de los 600s de caché.
+        registration.update();
+        document.addEventListener('visibilitychange', function() {
+          if (document.visibilityState === 'visible') registration.update();
+        });
       });
     }
   </script>
