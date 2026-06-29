@@ -101,6 +101,19 @@ final routerProvider = Provider<GoRouter>((ref) {
       final isDemo = ref.read(demoModeProvider);
       final path = state.matchedLocation;
 
+      // Enlace de recuperación de contraseña: Supabase entrega el código de
+      // intercambio (PKCE) como query param ('?code=...') sobre el
+      // redirectTo configurado, pero el navegador nunca envía el fragmento
+      // '#...' de esa URL al servidor de Supabase — por diseño, los
+      // fragments son puramente del lado del cliente — así que cualquier
+      // ruta que hayamos pedido después del '#' se pierde y el usuario
+      // siempre aterriza en la raíz con solo el query string. Detectamos
+      // ese caso aquí, en lugar de depender de que se preserve la ruta.
+      if (path != '/reset-password' &&
+          Uri.base.queryParameters.containsKey('code')) {
+        return '/reset-password';
+      }
+
       final publicPaths = [
         '/', '/onboarding', '/login', '/register',
         '/setup-client', '/setup-provider', '/verify-email', '/forgot-password',
