@@ -181,6 +181,82 @@ final _demoBookings = <Map<String, dynamic>>[
   {'id': 'bk-099', 'status': 'accepted', 'agreed_price': 1800.0, 'created_at': DateTime.now().subtract(const Duration(days: 1)).toIso8601String(), 'service_name': 'Jardinería', 'client': {'full_name': 'Valeria Soto'}, 'provider': {'full_name': 'Luis Vargas'}},
 ];
 
+// ─── Audit log ────────────────────────────────────────────────────────────────
+
+/// Registra una acción de admin en `admin_audit_log`. Best-effort: si falla
+/// (p.ej. en modo demo, sin tabla, etc.) no bloquea la acción principal.
+Future<void> logAdminAction({
+  required String action,
+  String? targetTable,
+  String? targetId,
+  Map<String, dynamic>? details,
+}) async {
+  try {
+    final user = SupabaseService.currentUser;
+    if (user == null) return;
+    await SupabaseService.client.from('admin_audit_log').insert({
+      'admin_id': user.id,
+      'admin_name': user.email ?? user.id,
+      'action': action,
+      'target_table': targetTable,
+      'target_id': targetId,
+      'details': details,
+    });
+  } catch (_) {}
+}
+
+final _demoAuditLog = <Map<String, dynamic>>[
+  {
+    'id': 'log-1', 'admin_name': 'admin@demo.com',
+    'action': 'Aprobó verificación', 'target_table': 'verification_requests',
+    'target_id': 'vreq-000', 'details': null,
+    'created_at': DateTime.now().subtract(const Duration(hours: 2)).toIso8601String(),
+  },
+  {
+    'id': 'log-2', 'admin_name': 'admin@demo.com',
+    'action': 'Suspendió usuario', 'target_table': 'profiles',
+    'target_id': 'user-000', 'details': null,
+    'created_at': DateTime.now().subtract(const Duration(days: 1)).toIso8601String(),
+  },
+];
+
+/// Últimas 50 acciones de admin registradas.
+final adminAuditLogProvider =
+    FutureProvider.autoDispose<List<Map<String, dynamic>>>((ref) async {
+  if (ref.watch(demoModeProvider)) return List.of(_demoAuditLog);
+  try {
+    final data = await SupabaseService.client
+        .from('admin_audit_log')
+        .select()
+        .order('created_at', ascending: false)
+        .limit(50);
+    return (data as List<dynamic>).cast<Map<String, dynamic>>();
+  } catch (_) {
+    return [];
+  }
+});
+
+// ─── Configuración del sistema ─────────────────────────────────────────────────
+
+/// key -> value (jsonb decodificado) de `app_settings`.
+final adminAppSettingsProvider =
+    FutureProvider.autoDispose<Map<String, dynamic>>((ref) async {
+  if (ref.watch(demoModeProvider)) {
+    return {'commission_rate': 0.15, 'maintenance_mode': false};
+  }
+  try {
+    final data = await SupabaseService.client.from('app_settings').select();
+    final map = <String, dynamic>{};
+    for (final row in (data as List<dynamic>)) {
+      final r = row as Map<String, dynamic>;
+      map[r['key'] as String] = r['value'];
+    }
+    return map;
+  } catch (_) {
+    return {};
+  }
+});
+
 // ─── Providers ────────────────────────────────────────────────────────────────
 
 /// Check if current user has admin role
@@ -461,7 +537,7 @@ final adminServiceCategoriesProvider =
   }
 });
 
-/// Last 10 registered users
+/// Last 10 registered users (vista rápida del Resumen)
 final adminRecentUsersProvider =
     FutureProvider.autoDispose<List<Map<String, dynamic>>>((ref) async {
   if (ref.watch(demoModeProvider)) return List.of(_demoUsers);
@@ -477,7 +553,40 @@ final adminRecentUsersProvider =
   }
 });
 
-/// Last 10 bookings with client + provider names
+/// TODOS los usuarios registrados (para la pestaña Usuarios con búsqueda/filtro).
+final adminAllUsersProvider =
+    FutureProvider.autoDispose<List<Map<String, dynamic>>>((ref) async {
+  if (ref.watch(demoModeProvider)) return List.of(_demoUsers);
+  try {
+    final data = await SupabaseService.client
+        .from('profiles')
+        .select('id, full_name, email, phone, role, province, city, created_at, is_verified, is_active')
+        .order('created_at', ascending: false);
+    return (data as List<dynamic>).cast<Map<String, dynamic>>();
+  } catch (_) {
+    return [];
+  }
+});
+
+/// Reservas (cliente, prestador, id) hechas o recibidas por un usuario — para
+/// el detalle de usuario en el panel admin.
+final adminUserBookingsProvider =
+    FutureProvider.autoDispose.family<List<Map<String, dynamic>>, String>((ref, userId) async {
+  if (ref.watch(demoModeProvider)) return [];
+  try {
+    final data = await SupabaseService.client
+        .from('bookings')
+        .select('id, service_name, status, agreed_price, created_at, client_id, provider_id')
+        .or('client_id.eq.$userId,provider_id.eq.$userId')
+        .order('created_at', ascending: false)
+        .limit(20);
+    return (data as List<dynamic>).cast<Map<String, dynamic>>();
+  } catch (_) {
+    return [];
+  }
+});
+
+/// Last 10 bookings with client + provider names (vista rápida del Resumen)
 final adminRecentBookingsProvider =
     FutureProvider.autoDispose<List<Map<String, dynamic>>>((ref) async {
   if (ref.watch(demoModeProvider)) return List.of(_demoBookings);
@@ -501,5 +610,47 @@ final adminRecentBookingsProvider =
     } catch (_) {
       return [];
     }
+  }
+});
+
+/// TODAS las reservas (hasta 200) con cliente + prestador — para la pestaña
+/// Reservas con control total (filtrar, cambiar estado, reembolsar, reasignar).
+final adminAllBookingsProvider =
+    FutureProvider.autoDispose<List<Map<String, dynamic>>>((ref) async {
+  if (ref.watch(demoModeProvider)) return List.of(_demoBookings);
+  try {
+    final data = await SupabaseService.client
+        .from('bookings')
+        .select(
+            '*, client:profiles!client_id(full_name), provider:provider_profiles!provider_id(full_name)')
+        .order('created_at', ascending: false)
+        .limit(200);
+    return (data as List<dynamic>).cast<Map<String, dynamic>>();
+  } catch (_) {
+    try {
+      final data = await SupabaseService.client
+          .from('bookings')
+          .select()
+          .order('created_at', ascending: false)
+          .limit(200);
+      return (data as List<dynamic>).cast<Map<String, dynamic>>();
+    } catch (_) {
+      return [];
+    }
+  }
+});
+
+/// Prestadores activos disponibles — para reasignar una reserva a otro prestador.
+final adminActiveProvidersProvider =
+    FutureProvider.autoDispose<List<Map<String, dynamic>>>((ref) async {
+  if (ref.watch(demoModeProvider)) return [];
+  try {
+    final data = await SupabaseService.client
+        .from('provider_profiles')
+        .select('id, full_name')
+        .order('full_name');
+    return (data as List<dynamic>).cast<Map<String, dynamic>>();
+  } catch (_) {
+    return [];
   }
 });

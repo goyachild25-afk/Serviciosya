@@ -60,7 +60,7 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen>
   @override
   void initState() {
     super.initState();
-    _tab = TabController(length: 6, vsync: this);
+    _tab = TabController(length: 8, vsync: this);
   }
 
   @override
@@ -74,9 +74,13 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen>
     ref.invalidate(adminVerificationsProvider);
     ref.invalidate(adminDisputesProvider);
     ref.invalidate(adminRecentUsersProvider);
+    ref.invalidate(adminAllUsersProvider);
     ref.invalidate(adminRecentBookingsProvider);
+    ref.invalidate(adminAllBookingsProvider);
     ref.invalidate(adminFinanceDataProvider);
     ref.invalidate(adminServiceCategoriesProvider);
+    ref.invalidate(adminAppSettingsProvider);
+    ref.invalidate(adminAuditLogProvider);
   }
 
   @override
@@ -171,6 +175,8 @@ class _AdminBody extends ConsumerWidget {
             const Tab(text: 'Usuarios'),
             const Tab(text: 'Reservas'),
             const Tab(text: 'Finanzas'),
+            const Tab(text: 'Configuración'),
+            const Tab(text: 'Auditoría'),
           ],
         ),
       ),
@@ -183,6 +189,8 @@ class _AdminBody extends ConsumerWidget {
           _UsersTab(),
           _BookingsTab(),
           _FinanceTab(),
+          _SettingsTab(),
+          _AuditLogTab(),
         ],
       ),
     );
@@ -1010,6 +1018,165 @@ class _UsersTab extends ConsumerStatefulWidget {
 
 class _UsersTabState extends ConsumerState<_UsersTab> {
   final Set<String> _busy = {};
+  final TextEditingController _search = TextEditingController();
+  String _query = '';
+  String _roleFilter = 'all'; // all | client | provider | admin
+
+  @override
+  void dispose() {
+    _search.dispose();
+    super.dispose();
+  }
+
+  Future<void> _editProfile(Map<String, dynamic> user) async {
+    final id = user['id'] as String;
+    final nameCtrl = TextEditingController(text: user['full_name'] as String? ?? '');
+    final phoneCtrl = TextEditingController(text: user['phone'] as String? ?? '');
+    final provinceCtrl = TextEditingController(text: user['province'] as String? ?? '');
+    final cityCtrl = TextEditingController(text: user['city'] as String? ?? '');
+
+    final saved = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('Editar perfil',
+            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(controller: nameCtrl,
+                  decoration: const InputDecoration(labelText: 'Nombre completo')),
+              const SizedBox(height: 10),
+              TextField(controller: phoneCtrl,
+                  decoration: const InputDecoration(labelText: 'Teléfono')),
+              const SizedBox(height: 10),
+              TextField(controller: provinceCtrl,
+                  decoration: const InputDecoration(labelText: 'Provincia')),
+              const SizedBox(height: 10),
+              TextField(controller: cityCtrl,
+                  decoration: const InputDecoration(labelText: 'Ciudad')),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text('Cancelar')),
+          ElevatedButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              child: const Text('Guardar')),
+        ],
+      ),
+    );
+
+    if (saved != true) return;
+    setState(() => _busy.add(id));
+    try {
+      if (!ref.read(demoModeProvider)) {
+        final updates = {
+          'full_name': nameCtrl.text.trim(),
+          'phone': phoneCtrl.text.trim(),
+          'province': provinceCtrl.text.trim(),
+          'city': cityCtrl.text.trim(),
+        };
+        await SupabaseService.client.from('profiles').update(updates).eq('id', id);
+        await logAdminAction(
+            action: 'Editó perfil de usuario',
+            targetTable: 'profiles', targetId: id, details: updates);
+        ref.invalidate(adminAllUsersProvider);
+        ref.invalidate(adminRecentUsersProvider);
+      }
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('✅ Perfil actualizado'), backgroundColor: AppColors.success,
+        ));
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: $e'), backgroundColor: AppColors.error),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _busy.remove(id));
+    }
+  }
+
+  Future<void> _showDetail(Map<String, dynamic> user) async {
+    final id = user['id'] as String;
+    await showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: Text(user['full_name'] as String? ?? 'Usuario',
+            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
+        content: SizedBox(
+          width: 400,
+          child: SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text('Email: ${user['email'] ?? '-'}', style: const TextStyle(fontSize: 12)),
+                Text('Teléfono: ${user['phone'] ?? '-'}', style: const TextStyle(fontSize: 12)),
+                Text('Rol: ${user['role'] ?? '-'}', style: const TextStyle(fontSize: 12)),
+                Text('Ubicación: ${user['city'] ?? '-'}, ${user['province'] ?? '-'}',
+                    style: const TextStyle(fontSize: 12)),
+                Text('ID: $id',
+                    style: const TextStyle(fontSize: 10, color: AppColors.textHint)),
+                const SizedBox(height: 12),
+                const Text('Últimas reservas',
+                    style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700)),
+                const SizedBox(height: 6),
+                Consumer(builder: (_, ref, __) {
+                  final async = ref.watch(adminUserBookingsProvider(id));
+                  return async.when(
+                    loading: () => const Padding(
+                        padding: EdgeInsets.all(8),
+                        child: CircularProgressIndicator(strokeWidth: 2)),
+                    error: (_, __) => const Text('No se pudieron cargar las reservas.',
+                        style: TextStyle(fontSize: 12, color: AppColors.textHint)),
+                    data: (bookings) {
+                      if (bookings.isEmpty) {
+                        return const Text('Sin reservas registradas.',
+                            style: TextStyle(fontSize: 12, color: AppColors.textHint));
+                      }
+                      return Column(
+                        children: bookings.take(8).map((b) {
+                          final status = b['status'] as String?;
+                          return Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 3),
+                            child: Row(
+                              children: [
+                                Expanded(
+                                  child: Text(b['service_name'] as String? ?? '-',
+                                      style: const TextStyle(fontSize: 12)),
+                                ),
+                                Text(_bookingStatusLabel(status),
+                                    style: TextStyle(
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.w600,
+                                        color: _bookingStatusColor(status))),
+                              ],
+                            ),
+                          );
+                        }).toList(),
+                      );
+                    },
+                  );
+                }),
+              ],
+            ),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Cerrar'),
+          ),
+        ],
+      ),
+    );
+  }
 
   Future<void> _toggleActive(Map<String, dynamic> user) async {
     final id = user['id'] as String;
@@ -1032,7 +1199,11 @@ class _UsersTabState extends ConsumerState<_UsersTab> {
         await SupabaseService.client
             .from('profiles')
             .update({'is_active': !isActive}).eq('id', id);
+        await logAdminAction(
+            action: isActive ? 'Suspendió usuario' : 'Reactivó usuario',
+            targetTable: 'profiles', targetId: id, details: {'name': name});
         ref.invalidate(adminRecentUsersProvider);
+        ref.invalidate(adminAllUsersProvider);
       }
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
@@ -1073,7 +1244,11 @@ class _UsersTabState extends ConsumerState<_UsersTab> {
         await SupabaseService.client
             .from('profiles')
             .update({'role': isAdmin ? 'client' : 'admin'}).eq('id', id);
+        await logAdminAction(
+            action: isAdmin ? 'Quitó rol admin' : 'Otorgó rol admin',
+            targetTable: 'profiles', targetId: id, details: {'name': name});
         ref.invalidate(adminRecentUsersProvider);
+        ref.invalidate(adminAllUsersProvider);
       }
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
@@ -1094,26 +1269,58 @@ class _UsersTabState extends ConsumerState<_UsersTab> {
 
   @override
   Widget build(BuildContext context) {
-    final async = ref.watch(adminRecentUsersProvider);
+    final async = ref.watch(adminAllUsersProvider);
 
     return async.when(
       loading: () => const Center(child: CircularProgressIndicator()),
       error: (e, _) => _ErrorState(
           message: e.toString(),
-          onRetry: () => ref.invalidate(adminRecentUsersProvider)),
-      data: (users) {
-        if (users.isEmpty) {
-          return const _EmptyState(
-            icon: Icons.people_outline,
-            title: 'Sin usuarios',
-            subtitle: 'No hay usuarios registrados aún.',
-            color: AppColors.primary,
-          );
-        }
+          onRetry: () => ref.invalidate(adminAllUsersProvider)),
+      data: (allUsers) {
+        final users = allUsers.where((u) {
+          if (_roleFilter != 'all' && (u['role'] as String? ?? 'client') != _roleFilter) {
+            return false;
+          }
+          if (_query.isEmpty) return true;
+          final name = (u['full_name'] as String? ?? '').toLowerCase();
+          final email = (u['email'] as String? ?? '').toLowerCase();
+          return name.contains(_query) || email.contains(_query);
+        }).toList();
 
         return Column(
           children: [
-            // Header
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+              child: TextField(
+                controller: _search,
+                onChanged: (v) => setState(() => _query = v.trim().toLowerCase()),
+                decoration: InputDecoration(
+                  hintText: 'Buscar por nombre o email...',
+                  prefixIcon: const Icon(Icons.search, size: 20),
+                  isDense: true,
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                ),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Row(
+                children: [
+                  for (final f in const [
+                    ['all', 'Todos'], ['client', 'Clientes'],
+                    ['provider', 'Prestadores'], ['admin', 'Admins'],
+                  ])
+                    Padding(
+                      padding: const EdgeInsets.only(right: 8),
+                      child: ChoiceChip(
+                        label: Text(f[1], style: const TextStyle(fontSize: 11)),
+                        selected: _roleFilter == f[0],
+                        onSelected: (_) => setState(() => _roleFilter = f[0]),
+                      ),
+                    ),
+                ],
+              ),
+            ),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
               color: AppColors.surfaceVariant,
@@ -1123,7 +1330,7 @@ class _UsersTabState extends ConsumerState<_UsersTab> {
                       size: 14, color: AppColors.textHint),
                   const SizedBox(width: 6),
                   Text(
-                    'Últimos ${users.length} usuarios registrados',
+                    '${users.length} de ${allUsers.length} usuarios',
                     style: const TextStyle(
                         fontSize: 12,
                         color: AppColors.textSecondary,
@@ -1132,6 +1339,16 @@ class _UsersTabState extends ConsumerState<_UsersTab> {
                 ],
               ),
             ),
+            if (users.isEmpty)
+              const Expanded(
+                child: _EmptyState(
+                  icon: Icons.people_outline,
+                  title: 'Sin resultados',
+                  subtitle: 'Ningún usuario coincide con la búsqueda/filtro.',
+                  color: AppColors.primary,
+                ),
+              )
+            else
             Expanded(
               child: ListView.separated(
                 padding: const EdgeInsets.all(16),
@@ -1235,10 +1452,20 @@ class _UsersTabState extends ConsumerState<_UsersTab> {
                                 icon: const Icon(Icons.more_vert,
                                     size: 18, color: AppColors.textHint),
                                 onSelected: (action) {
+                                  if (action == 'detail') _showDetail(u);
+                                  if (action == 'edit') _editProfile(u);
                                   if (action == 'active') _toggleActive(u);
                                   if (action == 'admin') _toggleAdmin(u);
                                 },
                                 itemBuilder: (_) => [
+                                  const PopupMenuItem(
+                                    value: 'detail',
+                                    child: Text('Ver detalle'),
+                                  ),
+                                  const PopupMenuItem(
+                                    value: 'edit',
+                                    child: Text('Editar perfil'),
+                                  ),
                                   PopupMenuItem(
                                     value: 'active',
                                     child: Text(isActive ? 'Suspender' : 'Reactivar'),
@@ -1266,30 +1493,270 @@ class _UsersTabState extends ConsumerState<_UsersTab> {
 // ═════════════════════════════════════════════════════════════════════════════
 // TAB 5 — RESERVAS
 // ═════════════════════════════════════════════════════════════════════════════
-class _BookingsTab extends ConsumerWidget {
+class _BookingsTab extends ConsumerStatefulWidget {
   const _BookingsTab();
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final async = ref.watch(adminRecentBookingsProvider);
+  ConsumerState<_BookingsTab> createState() => _BookingsTabState();
+}
+
+const _bookingStatuses = ['pending', 'accepted', 'in_progress', 'completed', 'cancelled'];
+
+class _BookingsTabState extends ConsumerState<_BookingsTab> {
+  final Set<String> _busy = {};
+  String _statusFilter = 'all';
+
+  Future<void> _forceStatus(Map<String, dynamic> b) async {
+    final id = b['id'] as String;
+    String selected = b['status'] as String? ?? 'pending';
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setLocal) => AlertDialog(
+          title: const Text('Cambiar estado de la reserva',
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: _bookingStatuses.map((s) => RadioListTile<String>(
+              dense: true,
+              title: Text(_bookingStatusLabel(s)),
+              value: s,
+              groupValue: selected,
+              onChanged: (v) => setLocal(() => selected = v!),
+            )).toList(),
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.of(ctx).pop(false), child: const Text('Cancelar')),
+            ElevatedButton(onPressed: () => Navigator.of(ctx).pop(true), child: const Text('Aplicar')),
+          ],
+        ),
+      ),
+    );
+    if (confirmed != true) return;
+
+    setState(() => _busy.add(id));
+    try {
+      if (!ref.read(demoModeProvider)) {
+        await SupabaseService.client.from('bookings').update({'status': selected}).eq('id', id);
+        await logAdminAction(
+            action: 'Forzó estado de reserva a "$selected"',
+            targetTable: 'bookings', targetId: id);
+        ref.invalidate(adminAllBookingsProvider);
+        ref.invalidate(adminRecentBookingsProvider);
+        ref.invalidate(adminStatsProvider);
+      }
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('✅ Estado actualizado'), backgroundColor: AppColors.success));
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: $e'), backgroundColor: AppColors.error));
+      }
+    } finally {
+      if (mounted) setState(() => _busy.remove(id));
+    }
+  }
+
+  Future<void> _cancelBooking(Map<String, dynamic> b) async {
+    final id = b['id'] as String;
+    final confirmed = await _showConfirmDialog(
+      context: context,
+      title: 'Cancelar reserva',
+      message: '¿Cancelar esta reserva? Esta acción notificará el cambio de estado.',
+      confirmLabel: 'Cancelar reserva',
+      confirmColor: AppColors.error,
+    );
+    if (!confirmed) return;
+
+    setState(() => _busy.add(id));
+    try {
+      if (!ref.read(demoModeProvider)) {
+        await SupabaseService.client.from('bookings').update({'status': 'cancelled'}).eq('id', id);
+        await logAdminAction(action: 'Canceló reserva', targetTable: 'bookings', targetId: id);
+        ref.invalidate(adminAllBookingsProvider);
+        ref.invalidate(adminRecentBookingsProvider);
+        ref.invalidate(adminStatsProvider);
+      }
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('🚫 Reserva cancelada'), backgroundColor: AppColors.error));
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: $e'), backgroundColor: AppColors.error));
+      }
+    } finally {
+      if (mounted) setState(() => _busy.remove(id));
+    }
+  }
+
+  Future<void> _refund(Map<String, dynamic> b) async {
+    final id = b['id'] as String;
+    final confirmed = await _showConfirmDialog(
+      context: context,
+      title: 'Marcar como reembolsada',
+      message: '¿Marcar el pago de esta reserva como reembolsado? Esto solo actualiza el registro; el reembolso real en la pasarela de pago debe procesarse por separado.',
+      confirmLabel: 'Marcar reembolsada',
+      confirmColor: AppColors.warning,
+    );
+    if (!confirmed) return;
+
+    setState(() => _busy.add(id));
+    try {
+      if (!ref.read(demoModeProvider)) {
+        await SupabaseService.client
+            .from('bookings').update({'payment_status': 'refunded'}).eq('id', id);
+        await logAdminAction(action: 'Marcó reserva como reembolsada', targetTable: 'bookings', targetId: id);
+        ref.invalidate(adminAllBookingsProvider);
+        ref.invalidate(adminRecentBookingsProvider);
+      }
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('💸 Marcada como reembolsada'), backgroundColor: AppColors.warning));
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: $e'), backgroundColor: AppColors.error));
+      }
+    } finally {
+      if (mounted) setState(() => _busy.remove(id));
+    }
+  }
+
+  Future<void> _reassign(Map<String, dynamic> b) async {
+    final id = b['id'] as String;
+    final providersAsync = ref.read(adminActiveProvidersProvider);
+    final providers = providersAsync.valueOrNull ?? [];
+    if (providers.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        content: Text('No hay prestadores disponibles para reasignar.'),
+        backgroundColor: AppColors.warning,
+      ));
+      return;
+    }
+    String? selectedId;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setLocal) => AlertDialog(
+          title: const Text('Reasignar prestador',
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
+          content: DropdownButtonFormField<String>(
+            value: selectedId,
+            items: providers
+                .map((p) => DropdownMenuItem(
+                    value: p['id'] as String,
+                    child: Text(p['full_name'] as String? ?? '-')))
+                .toList(),
+            onChanged: (v) => setLocal(() => selectedId = v),
+            decoration: const InputDecoration(labelText: 'Nuevo prestador'),
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.of(ctx).pop(false), child: const Text('Cancelar')),
+            ElevatedButton(
+                onPressed: selectedId == null ? null : () => Navigator.of(ctx).pop(true),
+                child: const Text('Reasignar')),
+          ],
+        ),
+      ),
+    );
+    if (confirmed != true || selectedId == null) return;
+
+    setState(() => _busy.add(id));
+    try {
+      if (!ref.read(demoModeProvider)) {
+        await SupabaseService.client
+            .from('bookings').update({'provider_id': selectedId}).eq('id', id);
+        await logAdminAction(
+            action: 'Reasignó prestador de reserva',
+            targetTable: 'bookings', targetId: id, details: {'new_provider_id': selectedId});
+        ref.invalidate(adminAllBookingsProvider);
+        ref.invalidate(adminRecentBookingsProvider);
+      }
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('✅ Prestador reasignado'), backgroundColor: AppColors.success));
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: $e'), backgroundColor: AppColors.error));
+      }
+    } finally {
+      if (mounted) setState(() => _busy.remove(id));
+    }
+  }
+
+  void _showDetail(Map<String, dynamic> b) {
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('Detalle de la reserva',
+            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
+        content: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text('Servicio: ${b['service_name'] ?? '-'}', style: const TextStyle(fontSize: 12)),
+              Text('Estado: ${_bookingStatusLabel(b['status'] as String?)}', style: const TextStyle(fontSize: 12)),
+              Text('Pago: ${b['payment_status'] ?? '-'}', style: const TextStyle(fontSize: 12)),
+              Text('Precio acordado: RD\$${b['agreed_price'] ?? '-'}', style: const TextStyle(fontSize: 12)),
+              Text('Dirección: ${b['address'] ?? '-'}', style: const TextStyle(fontSize: 12)),
+              Text('Notas: ${b['notes'] ?? '-'}', style: const TextStyle(fontSize: 12)),
+              const SizedBox(height: 6),
+              Text('ID: ${b['id']}', style: const TextStyle(fontSize: 10, color: AppColors.textHint)),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Cerrar')),
+        ],
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    ref.watch(adminActiveProvidersProvider); // precarga para el diálogo de reasignar
+    final async = ref.watch(adminAllBookingsProvider);
 
     return async.when(
       loading: () => const Center(child: CircularProgressIndicator()),
       error: (e, _) => _ErrorState(
           message: e.toString(),
-          onRetry: () => ref.invalidate(adminRecentBookingsProvider)),
-      data: (bookings) {
-        if (bookings.isEmpty) {
-          return const _EmptyState(
-            icon: Icons.calendar_today_outlined,
-            title: 'Sin reservas',
-            subtitle: 'No hay reservas registradas aún.',
-            color: AppColors.primary,
-          );
-        }
+          onRetry: () => ref.invalidate(adminAllBookingsProvider)),
+      data: (allBookings) {
+        final bookings = _statusFilter == 'all'
+            ? allBookings
+            : allBookings.where((b) => b['status'] == _statusFilter).toList();
 
         return Column(
           children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+              child: SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: Row(
+                  children: [
+                    for (final f in ['all', ..._bookingStatuses])
+                      Padding(
+                        padding: const EdgeInsets.only(right: 8),
+                        child: ChoiceChip(
+                          label: Text(f == 'all' ? 'Todas' : _bookingStatusLabel(f),
+                              style: const TextStyle(fontSize: 11)),
+                          selected: _statusFilter == f,
+                          onSelected: (_) => setState(() => _statusFilter = f),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            ),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
               color: AppColors.surfaceVariant,
@@ -1299,7 +1766,7 @@ class _BookingsTab extends ConsumerWidget {
                       size: 14, color: AppColors.textHint),
                   const SizedBox(width: 6),
                   Text(
-                    'Últimas ${bookings.length} reservas',
+                    '${bookings.length} de ${allBookings.length} reservas',
                     style: const TextStyle(
                         fontSize: 12,
                         color: AppColors.textSecondary,
@@ -1308,6 +1775,16 @@ class _BookingsTab extends ConsumerWidget {
                 ],
               ),
             ),
+            if (bookings.isEmpty)
+              const Expanded(
+                child: _EmptyState(
+                  icon: Icons.calendar_today_outlined,
+                  title: 'Sin reservas',
+                  subtitle: 'No hay reservas para este filtro.',
+                  color: AppColors.primary,
+                ),
+              )
+            else
             Expanded(
               child: ListView.separated(
                 padding: const EdgeInsets.all(16),
@@ -1326,6 +1803,7 @@ class _BookingsTab extends ConsumerWidget {
                   final serviceName = b['service_name'] as String? ?? '—';
                   final createdAt = DateTime.tryParse(
                       (b['created_at'] as String?) ?? '');
+                  final isBusy = _busy.contains(b['id']);
 
                   return Container(
                     padding: const EdgeInsets.all(12),
@@ -1363,6 +1841,29 @@ class _BookingsTab extends ConsumerWidget {
                                     color: _bookingStatusColor(status)),
                               ),
                             ),
+                            const SizedBox(width: 4),
+                            isBusy
+                                ? const SizedBox(
+                                    width: 18, height: 18,
+                                    child: CircularProgressIndicator(strokeWidth: 2))
+                                : PopupMenuButton<String>(
+                                    icon: const Icon(Icons.more_vert,
+                                        size: 18, color: AppColors.textHint),
+                                    onSelected: (action) {
+                                      if (action == 'detail') _showDetail(b);
+                                      if (action == 'status') _forceStatus(b);
+                                      if (action == 'refund') _refund(b);
+                                      if (action == 'reassign') _reassign(b);
+                                      if (action == 'cancel') _cancelBooking(b);
+                                    },
+                                    itemBuilder: (_) => const [
+                                      PopupMenuItem(value: 'detail', child: Text('Ver detalle')),
+                                      PopupMenuItem(value: 'status', child: Text('Cambiar estado')),
+                                      PopupMenuItem(value: 'reassign', child: Text('Reasignar prestador')),
+                                      PopupMenuItem(value: 'refund', child: Text('Marcar reembolsada')),
+                                      PopupMenuItem(value: 'cancel', child: Text('Cancelar reserva')),
+                                    ],
+                                  ),
                           ],
                         ),
                         const SizedBox(height: 6),
@@ -1580,6 +2081,9 @@ class _CategoriesSectionState extends ConsumerState<_CategoriesSection> {
         await SupabaseService.client
             .from('service_categories')
             .update({'is_active': !isActive}).eq('id', id);
+        await logAdminAction(
+            action: isActive ? 'Desactivó categoría' : 'Activó categoría',
+            targetTable: 'service_categories', targetId: id);
         ref.invalidate(adminServiceCategoriesProvider);
       }
     } catch (e) {
@@ -1587,6 +2091,121 @@ class _CategoriesSectionState extends ConsumerState<_CategoriesSection> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Error: $e'), backgroundColor: AppColors.error),
         );
+      }
+    } finally {
+      if (mounted) setState(() => _busy.remove(id));
+    }
+  }
+
+  Future<void> _createOrEdit({Map<String, dynamic>? existing}) async {
+    final isEdit = existing != null;
+    final idCtrl = TextEditingController(text: existing?['id'] as String? ?? '');
+    final nameCtrl = TextEditingController(text: existing?['name'] as String? ?? '');
+    final emojiCtrl = TextEditingController(text: existing?['emoji'] as String? ?? '🔧');
+    final orderCtrl = TextEditingController(
+        text: (existing?['sort_order'] as int?)?.toString() ?? '0');
+
+    final saved = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: Text(isEdit ? 'Editar categoría' : 'Nueva categoría',
+            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (!isEdit)
+                TextField(
+                  controller: idCtrl,
+                  decoration: const InputDecoration(
+                      labelText: 'ID (slug, ej: pet_care)', hintText: 'sin espacios, minúsculas'),
+                ),
+              if (!isEdit) const SizedBox(height: 10),
+              TextField(controller: nameCtrl,
+                  decoration: const InputDecoration(labelText: 'Nombre')),
+              const SizedBox(height: 10),
+              TextField(controller: emojiCtrl,
+                  decoration: const InputDecoration(labelText: 'Emoji')),
+              const SizedBox(height: 10),
+              TextField(controller: orderCtrl,
+                  keyboardType: TextInputType.number,
+                  decoration: const InputDecoration(labelText: 'Orden (sort_order)')),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.of(context).pop(false), child: const Text('Cancelar')),
+          ElevatedButton(onPressed: () => Navigator.of(context).pop(true), child: const Text('Guardar')),
+        ],
+      ),
+    );
+    if (saved != true) return;
+    if (nameCtrl.text.trim().isEmpty || (!isEdit && idCtrl.text.trim().isEmpty)) return;
+
+    final id = isEdit ? existing['id'] as String : idCtrl.text.trim().toLowerCase().replaceAll(' ', '_');
+    setState(() => _busy.add(id));
+    try {
+      if (!ref.read(demoModeProvider)) {
+        final data = {
+          'name': nameCtrl.text.trim(),
+          'emoji': emojiCtrl.text.trim(),
+          'sort_order': int.tryParse(orderCtrl.text.trim()) ?? 0,
+        };
+        if (isEdit) {
+          await SupabaseService.client.from('service_categories').update(data).eq('id', id);
+          await logAdminAction(action: 'Editó categoría', targetTable: 'service_categories', targetId: id, details: data);
+        } else {
+          await SupabaseService.client.from('service_categories').insert({...data, 'id': id, 'is_active': true});
+          await logAdminAction(action: 'Creó categoría', targetTable: 'service_categories', targetId: id, details: data);
+        }
+        ref.invalidate(adminServiceCategoriesProvider);
+      }
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(isEdit ? '✅ Categoría actualizada' : '✅ Categoría creada'),
+          backgroundColor: AppColors.success,
+        ));
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: $e'), backgroundColor: AppColors.error),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _busy.remove(id));
+    }
+  }
+
+  Future<void> _delete(Map<String, dynamic> cat) async {
+    final id = cat['id'] as String;
+    final name = cat['name'] as String? ?? id;
+    final confirmed = await _showConfirmDialog(
+      context: context,
+      title: 'Eliminar categoría',
+      message: '¿Eliminar "$name"? Si hay servicios de prestadores usando esta categoría, la eliminación fallará — desactívala en su lugar.',
+      confirmLabel: 'Eliminar',
+      confirmColor: AppColors.error,
+    );
+    if (!confirmed) return;
+
+    setState(() => _busy.add(id));
+    try {
+      if (!ref.read(demoModeProvider)) {
+        await SupabaseService.client.from('service_categories').delete().eq('id', id);
+        await logAdminAction(action: 'Eliminó categoría', targetTable: 'service_categories', targetId: id, details: {'name': name});
+        ref.invalidate(adminServiceCategoriesProvider);
+      }
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('🗑️ Categoría eliminada'), backgroundColor: AppColors.error));
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text('No se pudo eliminar (puede estar en uso): $e'),
+          backgroundColor: AppColors.error,
+        ));
       }
     } finally {
       if (mounted) setState(() => _busy.remove(id));
@@ -1603,34 +2222,291 @@ class _CategoriesSectionState extends ConsumerState<_CategoriesSection> {
           message: e.toString(),
           onRetry: () => ref.invalidate(adminServiceCategoriesProvider)),
       data: (categories) {
-        if (categories.isEmpty) {
-          return const Text('Sin categorías configuradas.',
-              style: TextStyle(fontSize: 13, color: AppColors.textSecondary));
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: [
+            TextButton.icon(
+              onPressed: () => _createOrEdit(),
+              icon: const Icon(Icons.add, size: 18),
+              label: const Text('Nueva categoría'),
+            ),
+            if (categories.isEmpty)
+              const Padding(
+                padding: EdgeInsets.symmetric(vertical: 12),
+                child: Text('Sin categorías configuradas.',
+                    style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
+              )
+            else
+              Container(
+                width: double.infinity,
+                decoration: BoxDecoration(
+                  color: AppColors.surface,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: AppColors.divider),
+                ),
+                child: Column(
+                  children: categories.map((cat) {
+                    final id = cat['id'] as String;
+                    final isActive = cat['is_active'] as bool? ?? true;
+                    final name = cat['name'] as String? ?? id;
+                    final emoji = cat['emoji'] as String? ?? '🔧';
+                    return ListTile(
+                      dense: true,
+                      title: Text('$emoji  $name',
+                          style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500)),
+                      subtitle: Text(isActive ? 'Visible para clientes' : 'Oculta',
+                          style: const TextStyle(fontSize: 11, color: AppColors.textHint)),
+                      trailing: _busy.contains(id)
+                          ? const SizedBox(width: 18, height: 18,
+                              child: CircularProgressIndicator(strokeWidth: 2))
+                          : Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Switch(
+                                  value: isActive,
+                                  onChanged: (_) => _toggle(cat),
+                                  activeColor: AppColors.success,
+                                ),
+                                IconButton(
+                                  icon: const Icon(Icons.edit_outlined, size: 18),
+                                  onPressed: () => _createOrEdit(existing: cat),
+                                ),
+                                IconButton(
+                                  icon: const Icon(Icons.delete_outline, size: 18, color: AppColors.error),
+                                  onPressed: () => _delete(cat),
+                                ),
+                              ],
+                            ),
+                    );
+                  }).toList(),
+                ),
+              ),
+          ],
+        );
+      },
+    );
+  }
+}
+
+// ═════════════════════════════════════════════════════════════════════════════
+// TAB 7 — CONFIGURACIÓN
+// ═════════════════════════════════════════════════════════════════════════════
+class _SettingsTab extends ConsumerStatefulWidget {
+  const _SettingsTab();
+
+  @override
+  ConsumerState<_SettingsTab> createState() => _SettingsTabState();
+}
+
+class _SettingsTabState extends ConsumerState<_SettingsTab> {
+  bool _saving = false;
+  final TextEditingController _commissionCtrl = TextEditingController();
+
+  Future<void> _saveCommission(double current) async {
+    final pct = double.tryParse(_commissionCtrl.text.trim());
+    if (pct == null || pct < 0 || pct > 100) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        content: Text('Ingresa un porcentaje válido entre 0 y 100.'),
+        backgroundColor: AppColors.error,
+      ));
+      return;
+    }
+    setState(() => _saving = true);
+    try {
+      if (!ref.read(demoModeProvider)) {
+        await SupabaseService.client.from('app_settings').update({
+          'value': pct / 100,
+          'updated_at': DateTime.now().toIso8601String(),
+        }).eq('key', 'commission_rate');
+        await logAdminAction(
+            action: 'Actualizó comisión de la plataforma',
+            targetTable: 'app_settings', targetId: 'commission_rate',
+            details: {'new_value': pct / 100});
+        ref.invalidate(adminAppSettingsProvider);
+      }
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('✅ Comisión actualizada'), backgroundColor: AppColors.success));
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: $e'), backgroundColor: AppColors.error));
+      }
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
+
+  Future<void> _toggleMaintenance(bool current) async {
+    final confirmed = await _showConfirmDialog(
+      context: context,
+      title: current ? 'Desactivar modo mantenimiento' : 'Activar modo mantenimiento',
+      message: current
+          ? '¿Quitar el modo mantenimiento? La app volverá a estar disponible para todos.'
+          : '¿Activar modo mantenimiento? Esto bloqueará el acceso a usuarios normales (clientes y prestadores) hasta que lo desactives. Los administradores seguirán teniendo acceso.',
+      confirmLabel: current ? 'Desactivar' : 'Activar mantenimiento',
+      confirmColor: current ? AppColors.success : AppColors.error,
+    );
+    if (!confirmed) return;
+
+    setState(() => _saving = true);
+    try {
+      if (!ref.read(demoModeProvider)) {
+        await SupabaseService.client.from('app_settings').update({
+          'value': !current,
+          'updated_at': DateTime.now().toIso8601String(),
+        }).eq('key', 'maintenance_mode');
+        await logAdminAction(
+            action: !current ? 'Activó modo mantenimiento' : 'Desactivó modo mantenimiento',
+            targetTable: 'app_settings', targetId: 'maintenance_mode');
+        ref.invalidate(adminAppSettingsProvider);
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: $e'), backgroundColor: AppColors.error));
+      }
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
+
+  @override
+  void dispose() {
+    _commissionCtrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final async = ref.watch(adminAppSettingsProvider);
+
+    return async.when(
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (e, _) => _ErrorState(
+          message: e.toString(),
+          onRetry: () => ref.invalidate(adminAppSettingsProvider)),
+      data: (settings) {
+        final commissionRate = ((settings['commission_rate'] as num?) ?? 0.15).toDouble();
+        final maintenanceMode = settings['maintenance_mode'] as bool? ?? false;
+        if (_commissionCtrl.text.isEmpty) {
+          _commissionCtrl.text = (commissionRate * 100).toStringAsFixed(1);
         }
-        return Container(
-          decoration: BoxDecoration(
-            color: AppColors.surface,
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: AppColors.divider),
-          ),
+
+        return SingleChildScrollView(
+          padding: const EdgeInsets.all(16),
           child: Column(
-            children: categories.map((cat) {
-              final id = cat['id'] as String;
-              final isActive = cat['is_active'] as bool? ?? true;
-              final name = cat['name'] as String? ?? id;
-              final emoji = cat['emoji'] as String? ?? '🔧';
-              return SwitchListTile(
-                dense: true,
-                value: isActive,
-                onChanged: _busy.contains(id) ? null : (_) => _toggle(cat),
-                activeColor: AppColors.success,
-                title: Text('$emoji  $name',
-                    style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500)),
-                subtitle: Text(isActive ? 'Visible para clientes' : 'Oculta',
-                    style: const TextStyle(fontSize: 11, color: AppColors.textHint)),
-              );
-            }).toList(),
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const _SectionTitle('Comisión de la plataforma'),
+              const SizedBox(height: 12),
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: AppColors.surface,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: AppColors.divider),
+                ),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        controller: _commissionCtrl,
+                        keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                        decoration: const InputDecoration(
+                            labelText: 'Comisión (%)', suffixText: '%'),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    ElevatedButton(
+                      onPressed: _saving ? null : () => _saveCommission(commissionRate),
+                      child: _saving
+                          ? const SizedBox(width: 16, height: 16,
+                              child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                          : const Text('Guardar'),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 24),
+              const _SectionTitle('Modo mantenimiento'),
+              const SizedBox(height: 12),
+              Container(
+                decoration: BoxDecoration(
+                  color: AppColors.surface,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: AppColors.divider),
+                ),
+                child: SwitchListTile(
+                  value: maintenanceMode,
+                  onChanged: _saving ? null : (_) => _toggleMaintenance(maintenanceMode),
+                  activeColor: AppColors.error,
+                  title: const Text('Bloquear acceso a usuarios normales',
+                      style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+                  subtitle: Text(
+                    maintenanceMode
+                        ? 'Activo: solo administradores pueden usar la app.'
+                        : 'Inactivo: la app funciona normalmente para todos.',
+                    style: const TextStyle(fontSize: 11, color: AppColors.textHint),
+                  ),
+                ),
+              ),
+            ],
           ),
+        );
+      },
+    );
+  }
+}
+
+// ═════════════════════════════════════════════════════════════════════════════
+// TAB 8 — AUDITORÍA
+// ═════════════════════════════════════════════════════════════════════════════
+class _AuditLogTab extends ConsumerWidget {
+  const _AuditLogTab();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final async = ref.watch(adminAuditLogProvider);
+
+    return async.when(
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (e, _) => _ErrorState(
+          message: e.toString(),
+          onRetry: () => ref.invalidate(adminAuditLogProvider)),
+      data: (logs) {
+        if (logs.isEmpty) {
+          return const _EmptyState(
+            icon: Icons.history,
+            title: 'Sin actividad registrada',
+            subtitle: 'Las acciones de administradores aparecerán aquí.',
+            color: AppColors.primary,
+          );
+        }
+        return ListView.separated(
+          padding: const EdgeInsets.all(16),
+          itemCount: logs.length,
+          separatorBuilder: (_, __) => const Divider(height: 1),
+          itemBuilder: (_, i) {
+            final log = logs[i];
+            final createdAt = DateTime.tryParse((log['created_at'] as String?) ?? '');
+            return ListTile(
+              dense: true,
+              leading: const Icon(Icons.history, size: 18, color: AppColors.textHint),
+              title: Text(log['action'] as String? ?? '-',
+                  style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+              subtitle: Text(
+                '${log['admin_name'] ?? '-'}'
+                '${log['target_table'] != null ? ' · ${log['target_table']}' : ''}',
+                style: const TextStyle(fontSize: 11, color: AppColors.textSecondary),
+              ),
+              trailing: createdAt != null
+                  ? Text(DateFormat('dd/MM HH:mm').format(createdAt),
+                      style: const TextStyle(fontSize: 10, color: AppColors.textHint))
+                  : null,
+            );
+          },
         );
       },
     );
