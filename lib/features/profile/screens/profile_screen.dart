@@ -430,6 +430,11 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
           onTap: () => context.push('/accessibility'),
         ),
         _ActionTile(
+          icon: Icons.privacy_tip_outlined,
+          label: 'Privacidad y mis datos',
+          onTap: () => context.push('/privacy'),
+        ),
+        _ActionTile(
           icon: Icons.help_outline,
           label: 'Ayuda y soporte',
           onTap: () => context.push('/help'),

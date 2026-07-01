@@ -6,6 +6,7 @@ import 'package:intl/intl.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/services/supabase_service.dart';
 import '../../../core/services/demo_provider.dart';
+import '../../../core/services/observability_service.dart';
 import '../../../shared/widgets/custom_button.dart';
 import '../../../shared/widgets/custom_text_field.dart';
 import '../../providers_list/models/service_provider_model.dart';
@@ -146,6 +147,14 @@ class _BookingScreenState extends ConsumerState<BookingScreen> {
           })
           .select('id')
           .single();
+
+      // ── Analytics (fire-and-forget) ────────────────────────────────
+      ObservabilityService.trackEvent('booking_created', properties: {
+        'booking_id': inserted['id'],
+        'service': _selectedService!.categoryName,
+        'has_fixed_price':
+            _selectedService!.pricingType == PricingType.fixed,
+      });
 
       // ── Enviar email de confirmación (fire-and-forget) ─────────────
       try {

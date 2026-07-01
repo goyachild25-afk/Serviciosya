@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:timeago/timeago.dart' as timeago;
 import 'app.dart';
+import 'core/services/observability_service.dart';
 import 'core/services/supabase_service.dart';
 import 'core/services/notification_service.dart';
 
@@ -17,23 +18,27 @@ void main() async {
   // ejecución (ej: el panel admin rompía "Ingresos este mes · junio 2026").
   await initializeDateFormatting('es');
 
-  // Inicializar Supabase
-  try {
-    await SupabaseService.initialize();
-  } catch (_) {
-    // Sin credenciales reales → la app funciona en Modo Demo
-  }
+  // Sentry (si hay DSN) envuelve toda la ejecución para captar errores
+  // sincrónicos y asincrónicos del framework. Sin DSN, es no-op.
+  await ObservabilityService.init(appRunner: () async {
+    // Inicializar Supabase
+    try {
+      await SupabaseService.initialize();
+    } catch (_) {
+      // Sin credenciales reales → la app funciona en Modo Demo
+    }
 
-  // Inicializar Firebase (para push notifications)
-  try {
-    await NotificationService.initializeFirebase();
-  } catch (_) {
-    // Firebase no configurado aún → notificaciones no disponibles
-  }
+    // Inicializar Firebase (para push notifications)
+    try {
+      await NotificationService.initializeFirebase();
+    } catch (_) {
+      // Firebase no configurado aún → notificaciones no disponibles
+    }
 
-  runApp(
-    const ProviderScope(
-      child: ServiciosYaApp(),
-    ),
-  );
+    runApp(
+      const ProviderScope(
+        child: ServiciosYaApp(),
+      ),
+    );
+  });
 }

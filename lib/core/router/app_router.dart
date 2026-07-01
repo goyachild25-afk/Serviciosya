@@ -27,6 +27,9 @@ import '../../features/notifications/screens/notifications_screen.dart';
 import '../../features/auth/screens/change_password_screen.dart';
 import '../../features/profile/screens/help_screen.dart';
 import '../../features/profile/screens/accessibility_screen.dart';
+import '../../features/profile/screens/privacy_screen.dart';
+import '../../features/maintenance/screens/maintenance_screen.dart';
+import '../services/maintenance_service.dart';
 import '../../features/safety/screens/terms_screen.dart';
 import '../../features/safety/screens/report_dispute_screen.dart';
 import '../../features/provider_dashboard/screens/rate_client_screen.dart';
@@ -94,6 +97,10 @@ CustomTransitionPage<void> _slideUpPage(LocalKey key, Widget child) =>
 final routerProvider = Provider<GoRouter>((ref) {
   final authState = ref.watch(authStateProvider);
   final userRole = ref.watch(userRoleProvider);
+  // Mantenimiento: lo lee en Realtime, así que activar el toggle desde el
+  // panel admin bloquea a los usuarios no-admin en la próxima navegación
+  // sin desplegar código.
+  final maintenance = ref.watch(maintenanceModeProvider).valueOrNull ?? false;
 
   return GoRouter(
     initialLocation: '/',
@@ -101,6 +108,22 @@ final routerProvider = Provider<GoRouter>((ref) {
       final isLoggedIn = authState.value != null;
       final isDemo = ref.read(demoModeProvider);
       final path = state.matchedLocation;
+
+      // ── Modo mantenimiento ─────────────────────────────────────────────
+      // Admins (y sesiones demo) siempre pueden usar la app para diagnosticar
+      // el incidente. El resto ve una pantalla estática que se auto-desbloquea
+      // en cuanto el admin apague el toggle (el provider es Realtime).
+      if (maintenance &&
+          !isDemo &&
+          userRole != UserRole.admin &&
+          path != '/maintenance' &&
+          path != '/reset-password') {
+        return '/maintenance';
+      }
+      // Si el modo mantenimiento se desactivó, sacar al usuario de esa pantalla
+      if (!maintenance && path == '/maintenance') {
+        return '/';
+      }
 
       // Enlace de recuperación de contraseña: Supabase entrega el código de
       // intercambio (PKCE) como query param ('?code=...') sobre el
@@ -391,6 +414,16 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/accessibility',
         pageBuilder: (_, state) =>
             _slidePage(state.pageKey, const AccessibilityScreen()),
+      ),
+      GoRoute(
+        path: '/privacy',
+        pageBuilder: (_, state) =>
+            _slidePage(state.pageKey, const PrivacyScreen()),
+      ),
+      GoRoute(
+        path: '/maintenance',
+        pageBuilder: (_, state) =>
+            _fadePage(state.pageKey, const MaintenanceScreen()),
       ),
 
       // ── Chat & notificaciones ──────────────────────────────────────────────

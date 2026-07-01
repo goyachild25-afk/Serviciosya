@@ -48,6 +48,10 @@ dependencies:
   uuid: ^4.4.0
   timeago: ^3.6.1
 
+  # Observability — Sentry para errores. El DSN es opcional; si no se
+  # provee vía --dart-define=SENTRY_DSN=..., el runtime queda no-op.
+  sentry_flutter: ^8.9.0
+
   # Fonts
   google_fonts: ^6.2.1
 

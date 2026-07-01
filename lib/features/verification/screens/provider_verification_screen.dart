@@ -7,6 +7,7 @@ import '../../../core/services/supabase_service.dart';
 import '../../../core/services/demo_provider.dart';
 import '../../../shared/widgets/custom_button.dart';
 import '../../../shared/widgets/custom_text_field.dart';
+import '../../../core/utils/cedula_validator.dart';
 
 class ProviderVerificationScreen extends ConsumerStatefulWidget {
   const ProviderVerificationScreen({super.key});
@@ -98,7 +99,7 @@ class _ProviderVerificationScreenState
       // Guardar en base de datos
       await SupabaseService.client.from('verification_requests').upsert({
         'user_id': user.id,
-        'id_number': _idNumberCtrl.text.trim(),
+        'id_number': CedulaValidator.format(_idNumberCtrl.text.trim()),
         'bio': _bioCtrl.text.trim(),
         'id_front_url': frontUrl,
         'id_back_url': backUrl,
@@ -241,12 +242,11 @@ class _ProviderVerificationScreenState
               const SizedBox(height: 12),
               AppTextField(
                 label: 'Número de cédula',
-                hint: '0-0000-0000',
+                hint: '000-0000000-0',
                 controller: _idNumberCtrl,
                 prefixIcon: Icons.badge_outlined,
                 keyboardType: TextInputType.number,
-                validator: (v) =>
-                    v == null || v.isEmpty ? 'Campo requerido' : null,
+                validator: (v) => CedulaValidator.errorMessage(v ?? ''),
               ),
               const SizedBox(height: 12),
               AppTextField(
