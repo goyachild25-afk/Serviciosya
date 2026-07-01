@@ -1,12 +1,81 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../../core/constants/app_colors.dart';
+import '../../../core/services/supabase_service.dart';
 
-class HelpScreen extends StatelessWidget {
+// ─── Support contact settings (leídos de public.app_settings) ─────────────────
+class _SupportContact {
+  final String email;
+  final String whatsapp; // solo dígitos, en formato E.164 sin '+'
+  final String hours;
+  const _SupportContact({
+    required this.email,
+    required this.whatsapp,
+    required this.hours,
+  });
+
+  static const _SupportContact fallback = _SupportContact(
+    email: 'soporte@serviciosya.do',
+    whatsapp: '18095550000',
+    hours: 'Lunes a viernes, 8am – 6pm',
+  );
+
+  String get whatsappDisplay {
+    // Formato: +1 809-555-0000
+    if (whatsapp.length < 10) return whatsapp;
+    final country = whatsapp.length > 10 ? whatsapp.substring(0, whatsapp.length - 10) : '';
+    final rest = whatsapp.substring(whatsapp.length - 10);
+    final area = rest.substring(0, 3);
+    final mid = rest.substring(3, 6);
+    final end = rest.substring(6);
+    return country.isEmpty ? '$area-$mid-$end' : '+$country $area-$mid-$end';
+  }
+}
+
+final _supportContactProvider = FutureProvider.autoDispose<_SupportContact>((ref) async {
+  try {
+    final rows = await SupabaseService.client
+        .from('app_settings')
+        .select('key, value')
+        .inFilter('key', ['support_email', 'support_whatsapp', 'support_hours']);
+    final map = <String, dynamic>{};
+    for (final r in (rows as List<dynamic>)) {
+      final m = r as Map<String, dynamic>;
+      map[m['key'] as String] = m['value'];
+    }
+    return _SupportContact(
+      email: (map['support_email'] as String?) ?? _SupportContact.fallback.email,
+      whatsapp: (map['support_whatsapp'] as String?) ?? _SupportContact.fallback.whatsapp,
+      hours: (map['support_hours'] as String?) ?? _SupportContact.fallback.hours,
+    );
+  } catch (_) {
+    return _SupportContact.fallback;
+  }
+});
+
+class HelpScreen extends ConsumerWidget {
   const HelpScreen({super.key});
 
+  Future<void> _launchOrToast(BuildContext context, Uri uri, String failureMsg) async {
+    try {
+      final ok = await launchUrl(uri, mode: LaunchMode.externalApplication);
+      if (!ok && context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(failureMsg)));
+      }
+    } catch (_) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(failureMsg)));
+      }
+    }
+  }
+
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final contactAsync = ref.watch(_supportContactProvider);
+    final contact = contactAsync.valueOrNull ?? _SupportContact.fallback;
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Ayuda y soporte'),
@@ -18,26 +87,6 @@ class HelpScreen extends StatelessWidget {
       body: ListView(
         padding: const EdgeInsets.all(20),
         children: [
-          // ── Buscar ayuda ─────────────────────────────────────
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-            decoration: BoxDecoration(
-              color: AppColors.surfaceVariant,
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: AppColors.border),
-            ),
-            child: const Row(
-              children: [
-                Icon(Icons.search, color: AppColors.textHint),
-                SizedBox(width: 10),
-                Text('¿En qué podemos ayudarte?',
-                    style:
-                        TextStyle(color: AppColors.textHint, fontSize: 14)),
-              ],
-            ),
-          ),
-          const SizedBox(height: 28),
-
           // ── Preguntas frecuentes ─────────────────────────────
           const _SectionHeader('Preguntas frecuentes'),
           const SizedBox(height: 12),
@@ -79,23 +128,37 @@ class HelpScreen extends StatelessWidget {
           _ContactTile(
             icon: Icons.email_outlined,
             label: 'Correo electrónico',
-            value: 'soporte@ServiciosYa.cr',
+            value: contact.email,
             color: AppColors.primary,
-            onTap: () {}, // url_launcher para abrir correo
+            onTap: () => _launchOrToast(
+              context,
+              Uri(
+                scheme: 'mailto',
+                path: contact.email,
+                query: 'subject=Consulta%20ServiciosYa',
+              ),
+              'No se pudo abrir el correo. Puedes escribirnos a ${contact.email}',
+            ),
           ),
           const SizedBox(height: 8),
           _ContactTile(
             icon: Icons.chat_outlined,
             label: 'WhatsApp',
-            value: '+1-809-555-0000',
+            value: contact.whatsappDisplay,
             color: const Color(0xFF25D366),
-            onTap: () {}, // abrir WhatsApp
+            onTap: () => _launchOrToast(
+              context,
+              Uri.parse(
+                'https://wa.me/${contact.whatsapp}?text=${Uri.encodeComponent("Hola, necesito ayuda con ServiciosYa.")}',
+              ),
+              'No se pudo abrir WhatsApp. Puedes escribir a +${contact.whatsapp}',
+            ),
           ),
           const SizedBox(height: 8),
           _ContactTile(
             icon: Icons.access_time_outlined,
             label: 'Horario de atención',
-            value: 'Lunes a viernes, 8am – 6pm',
+            value: contact.hours,
             color: AppColors.textSecondary,
             onTap: null,
           ),
@@ -267,23 +330,23 @@ class _ContactTile extends StatelessWidget {
           children: [
             Icon(icon, color: color, size: 22),
             const SizedBox(width: 12),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(label,
-                    style: const TextStyle(
-                        fontSize: 11, color: AppColors.textSecondary)),
-                Text(value,
-                    style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                        color: color)),
-              ],
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(label,
+                      style: const TextStyle(
+                          fontSize: 12, color: AppColors.textSecondary)),
+                  Text(value,
+                      style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: color)),
+                ],
+              ),
             ),
-            if (onTap != null) ...[
-              const Spacer(),
+            if (onTap != null)
               Icon(Icons.chevron_right, color: color.withValues(alpha: 0.5)),
-            ],
           ],
         ),
       ),

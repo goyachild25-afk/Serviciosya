@@ -198,10 +198,71 @@ class _BookingScreenState extends ConsumerState<BookingScreen> {
       ),
       body: providerAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => Center(child: Text('Error: $e')),
+        error: (e, _) => Center(
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(Icons.cloud_off_rounded,
+                    size: 56, color: AppColors.textHint),
+                const SizedBox(height: 12),
+                const Text(
+                  'No pudimos cargar la información del prestador',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                      fontSize: 16, fontWeight: FontWeight.w600),
+                ),
+                const SizedBox(height: 8),
+                const Text('Revisa tu conexión e intenta de nuevo.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                        fontSize: 14, color: AppColors.textSecondary)),
+                const SizedBox(height: 20),
+                FilledButton.icon(
+                  icon: const Icon(Icons.refresh),
+                  label: const Text('Reintentar'),
+                  onPressed: () => ref.invalidate(
+                      providerDetailProvider(widget.providerId)),
+                ),
+              ],
+            ),
+          ),
+        ),
         data: (provider) {
           if (provider == null) {
-            return const Center(child: Text('Prestador no encontrado'));
+            return Center(
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(Icons.person_off_outlined,
+                        size: 56, color: AppColors.textHint),
+                    const SizedBox(height: 12),
+                    const Text(
+                      'No encontramos este prestador',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                          fontSize: 16, fontWeight: FontWeight.w600),
+                    ),
+                    const SizedBox(height: 8),
+                    const Text(
+                        'Es posible que ya no esté disponible. Prueba con otro prestador.',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                            fontSize: 14,
+                            color: AppColors.textSecondary)),
+                    const SizedBox(height: 20),
+                    FilledButton.icon(
+                      icon: const Icon(Icons.arrow_back),
+                      label: const Text('Volver'),
+                      onPressed: () => context.pop(),
+                    ),
+                  ],
+                ),
+              ),
+            );
           }
           return Form(
             key: _formKey,

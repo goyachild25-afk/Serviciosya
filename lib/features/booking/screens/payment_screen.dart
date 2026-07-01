@@ -94,6 +94,33 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // ── Aviso de fase piloto ─────────────────────────────
+            Container(
+              padding: const EdgeInsets.all(14),
+              margin: const EdgeInsets.only(bottom: 20),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFFF7ED),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: const Color(0xFFFDBA74)),
+              ),
+              child: const Row(
+                children: [
+                  Icon(Icons.info_outline,
+                      size: 20, color: Color(0xFFC2410C)),
+                  SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      'Fase piloto: por ahora acordarás el pago directamente con el prestador. El cobro dentro de la app estará disponible próximamente.',
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: Color(0xFF7C2D12),
+                        height: 1.35,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
             // ── Resumen del servicio ─────────────────────────────
             _SectionTitle('Resumen del servicio'),
             const SizedBox(height: 12),

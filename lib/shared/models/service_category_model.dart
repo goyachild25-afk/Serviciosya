@@ -103,9 +103,21 @@ final List<ServiceCategory> serviceCategories = [
 // kServiceCategories (ver onboarding_provider.dart). Sin este mapeo, una
 // solicitud de "Mantenimiento" o "Jardín" nunca encuentra prestadores
 // elegibles, porque los IDs no coinciden directamente.
+// IMPORTANTE: mantener sincronizado con las categorías granulares reales en
+// public.service_categories. Cualquier granular activa que exista en la DB
+// debe estar mapeada aquí o su prestador NUNCA verá solicitudes de esa área.
 const Map<String, List<String>> broadToGranularCategoryIds = {
-  'cleaning': ['home_cleaning', 'office_cleaning'],
-  'garden': ['gardening'],
+  'cleaning': [
+    'home_cleaning',
+    'office_cleaning',
+    'deep_cleaning',
+    'pool_cleaning',
+    'laundry',
+  ],
+  'garden': [
+    'gardening',
+    'yard_maintenance',
+  ],
   'pets': ['pet_care'],
   'vehicles': ['car_wash'],
   'maintenance': [
@@ -114,10 +126,19 @@ const Map<String, List<String>> broadToGranularCategoryIds = {
     'painting',
     'carpentry',
     'ac_service',
+    'ac_maintenance',
     'pest_control',
     'appliance_repair',
+    'security',
   ],
-  'caregiving': ['elderly_care', 'babysitting'],
+  'caregiving': [
+    'elderly_care',
+    'elder_care', // alias legacy: hay prestadores con esta categoría duplicada
+    'babysitting',
+  ],
   'cooking': ['cooking'],
   'moving': ['moving'],
+  // 'styling' (estilismo a domicilio) queda intencionalmente sin categoría
+  // amplia — no cabe en ninguna de las 8 principales; si el negocio decide
+  // promocionarlo, agregar una 9ª categoría "belleza" y mapearla aquí.
 };

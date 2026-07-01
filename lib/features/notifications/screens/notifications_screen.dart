@@ -36,7 +36,28 @@ class NotificationsScreen extends ConsumerWidget {
       ),
       body: notifsAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => Center(child: Text('Error: $e')),
+        error: (_, __) => const Center(
+          child: Padding(
+            padding: EdgeInsets.all(24),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.cloud_off_rounded,
+                    size: 56, color: AppColors.textHint),
+                SizedBox(height: 12),
+                Text('No pudimos cargar tus notificaciones',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                        fontSize: 16, fontWeight: FontWeight.w600)),
+                SizedBox(height: 6),
+                Text('Revisa tu conexión e intenta de nuevo.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                        fontSize: 14, color: AppColors.textSecondary)),
+              ],
+            ),
+          ),
+        ),
         data: (notifs) {
           if (notifs.isEmpty) {
             return const Center(

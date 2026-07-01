@@ -1309,7 +1309,7 @@ class _UserLocationMapState extends ConsumerState<_UserLocationMap> {
     } catch (_) {
       if (mounted) {
         setState(() {
-          _userLocation = const LatLng(18.7357, -70.1627); // Default: Santo Domingo
+          _userLocation = const LatLng(18.4861, -69.9312); // Default: Santo Domingo
           _isLoadingLocation = false;
           _updateMarkers();
         });
@@ -1349,7 +1349,7 @@ class _UserLocationMapState extends ConsumerState<_UserLocationMap> {
     return GoogleMap(
       onMapCreated: (controller) => _mapController = controller,
       initialCameraPosition: CameraPosition(
-        target: _userLocation ?? const LatLng(18.7357, -70.1627),
+        target: _userLocation ?? const LatLng(18.4861, -69.9312),
         zoom: 13,
       ),
       markers: _markers,

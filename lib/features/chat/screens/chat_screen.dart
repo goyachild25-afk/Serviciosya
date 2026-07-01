@@ -333,8 +333,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error: $e'),
+          const SnackBar(
+            content: Text('No pudimos enviar tu mensaje. Intenta de nuevo.'),
             backgroundColor: AppColors.error,
           ),
         );
@@ -556,7 +556,16 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     final messagesAsync = ref.watch(chatMessagesProvider(widget.bookingId));
     return messagesAsync.when(
       loading: () => const Center(child: CircularProgressIndicator()),
-      error: (e, _) => Center(child: Text('Error: $e')),
+      error: (_, __) => const Center(
+        child: Padding(
+          padding: EdgeInsets.all(24),
+          child: Text(
+            'No pudimos cargar el chat. Revisa tu conexión.',
+            textAlign: TextAlign.center,
+            style: TextStyle(fontSize: 14, color: AppColors.textSecondary),
+          ),
+        ),
+      ),
       data: (messages) {
         if (messages.isEmpty) return _buildEmptyChat();
         final reversedMessages = List.from(messages.reversed);

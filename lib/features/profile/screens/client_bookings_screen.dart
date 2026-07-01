@@ -63,7 +63,34 @@ class _ClientBookingsScreenState extends ConsumerState<ClientBookingsScreen> {
       ),
       body: bookingsAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => Center(child: Text('Error: $e')),
+        error: (_, __) => Center(
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(Icons.cloud_off_rounded,
+                    size: 56, color: AppColors.textHint),
+                const SizedBox(height: 12),
+                const Text('No pudimos cargar tus reservas',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                        fontSize: 16, fontWeight: FontWeight.w600)),
+                const SizedBox(height: 6),
+                const Text('Revisa tu conexión e intenta de nuevo.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                        fontSize: 14, color: AppColors.textSecondary)),
+                const SizedBox(height: 20),
+                FilledButton.icon(
+                  onPressed: () => ref.invalidate(myBookingsProvider),
+                  icon: const Icon(Icons.refresh),
+                  label: const Text('Reintentar'),
+                ),
+              ],
+            ),
+          ),
+        ),
         data: (bookings) {
           if (bookings.isEmpty) return _buildEmpty(context);
           return RefreshIndicator(
@@ -257,7 +284,9 @@ class _ClientBookingsScreenState extends ConsumerState<ClientBookingsScreen> {
                         setDialogState(() => sending = false);
                         if (ctx.mounted) {
                           ScaffoldMessenger.of(ctx).showSnackBar(
-                            SnackBar(content: Text('Error: $e')),
+                            const SnackBar(
+                                content: Text(
+                                    'No pudimos enviar tu reseña. Intenta de nuevo.')),
                           );
                         }
                       }
