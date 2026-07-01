@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:serviciosya/core/constants/app_constants.dart';
+import 'package:servicios_ya/core/constants/app_constants.dart';
 
 void main() {
   group('AppConstants', () {

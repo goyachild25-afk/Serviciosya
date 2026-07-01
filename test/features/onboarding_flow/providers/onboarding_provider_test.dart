@@ -56,9 +56,9 @@ void main() {
         expect(category.containsKey('id'), true);
         expect(category.containsKey('name'), true);
         expect(category.containsKey('emoji'), true);
-        expect(category['id'].isNotEmpty, true);
-        expect(category['name'].isNotEmpty, true);
-        expect(category['emoji'].isNotEmpty, true);
+        expect((category['id'] as String).isNotEmpty, true);
+        expect((category['name'] as String).isNotEmpty, true);
+        expect((category['emoji'] as String).isNotEmpty, true);
       }
     });
 
