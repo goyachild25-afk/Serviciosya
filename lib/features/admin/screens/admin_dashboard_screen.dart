@@ -626,16 +626,21 @@ class _VerificationCard extends StatelessWidget {
               const Icon(Icons.badge_outlined,
                   size: 14, color: AppColors.textHint),
               const SizedBox(width: 6),
-              Text('Cédula: $cedula',
-                  style: const TextStyle(
-                      fontSize: 13, fontWeight: FontWeight.w600)),
-              const Spacer(),
-              if (submittedAt != null)
+              Expanded(
+                child: Text('Cédula: $cedula',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                        fontSize: 13, fontWeight: FontWeight.w600)),
+              ),
+              if (submittedAt != null) ...[
+                const SizedBox(width: 8),
                 Text(
                   DateFormat('dd/MM/yyyy HH:mm').format(submittedAt),
                   style: const TextStyle(
                       fontSize: 11, color: AppColors.textHint),
                 ),
+              ],
             ],
           ),
           const SizedBox(height: 12),
@@ -2327,8 +2332,12 @@ class _CategoriesSectionState extends ConsumerState<_CategoriesSection> {
                     return ListTile(
                       dense: true,
                       title: Text('$emoji  $name',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                           style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500)),
                       subtitle: Text(isActive ? 'Visible para clientes' : 'Oculta',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                           style: const TextStyle(fontSize: 11, color: AppColors.textHint)),
                       trailing: _busy.contains(id)
                           ? const SizedBox(width: 18, height: 18,
