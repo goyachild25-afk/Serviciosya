@@ -1,13 +1,24 @@
-<svg viewBox="0 0 56 56" xmlns="http://www.w3.org/2000/svg">
-  <rect width="56" height="56" rx="14" fill="#0077B6"/>
-  <path d="M9 30 L28 13 L47 30" stroke="white" stroke-width="3"
-    fill="none" stroke-linecap="round" stroke-linejoin="round"/>
-  <rect x="16" y="30" width="24" height="20" rx="4" fill="white"/>
-  <rect x="20" y="33" width="7" height="7" rx="2" fill="#0077B6"/>
-  <rect x="29" y="33" width="7" height="7" rx="2" fill="#0077B6"/>
-  <rect x="20" y="40" width="16" height="10" rx="3" fill="#0077B6"/>
-  <rect x="24" y="42" width="8" height="8" rx="2" fill="white"/>
-  <circle cx="44" cy="19" r="10" fill="#FF6B47"/>
-  <path d="M39 19 L43 23 L50 15" stroke="white" stroke-width="2.2"
-    fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+<svg viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+  <!-- YALO — "La casa resuelta"
+       casa = servicios del hogar · check = "¡Ya!" (resuelto)
+       sol dorado = Caribe · gradiente azul = Brisa Caribeña (paleta de la app) -->
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#023E8A"/>
+      <stop offset="0.55" stop-color="#0077B6"/>
+      <stop offset="1" stop-color="#48CAE4"/>
+    </linearGradient>
+    <linearGradient id="chk" x1="0" y1="1" x2="1" y2="0">
+      <stop offset="0" stop-color="#FF6B47"/>
+      <stop offset="1" stop-color="#FFAA00"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="116" fill="url(#bg)"/>
+  <circle cx="404" cy="118" r="26" fill="#FFAA00"/>
+  <path d="M140 250 L256 148 L372 250 L372 386 L140 386 Z"
+    fill="none" stroke="#FFFFFF" stroke-width="32"
+    stroke-linejoin="round" stroke-linecap="round"/>
+  <path d="M196 296 L242 344 L314 258"
+    fill="none" stroke="url(#chk)" stroke-width="40"
+    stroke-linecap="round" stroke-linejoin="round"/>
 </svg>

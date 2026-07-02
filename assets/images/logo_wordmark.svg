@@ -1,0 +1,12 @@
+<svg viewBox="0 0 580 200" xmlns="http://www.w3.org/2000/svg">
+  <!-- YALO wordmark — la O lleva el check de "resuelto" -->
+  <g fill="none" stroke="#03213B" stroke-width="27" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M42 42 L92 106 L142 42 M92 106 L92 158"/>
+    <path d="M167 158 L216 42 L265 158 M184 120 L248 120"/>
+    <path d="M305 42 L305 158 L378 158"/>
+    <circle cx="478" cy="100" r="58"/>
+  </g>
+  <path d="M452 102 L472 124 L504 80"
+    fill="none" stroke="#FF6B47" stroke-width="20"
+    stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
