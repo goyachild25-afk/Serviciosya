@@ -67,7 +67,7 @@ class ReferralsScreen extends ConsumerWidget {
 
   Future<void> _shareWhatsApp(BuildContext context, String code) async {
     final msg =
-        'Te invito a ServiciosYa 🏠 — la app dominicana para servicios del hogar. Usa mi código *$code* al registrarte: ${_shareLink(code)}';
+        '¿Ya lo resolviste? Con YALO, sí 🏠 La app dominicana para servicios del hogar. Usa mi código *$code* al registrarte: ${_shareLink(code)}';
     final uri =
         Uri.parse('https://wa.me/?text=${Uri.encodeComponent(msg)}');
     await launchUrl(uri, mode: LaunchMode.externalApplication);

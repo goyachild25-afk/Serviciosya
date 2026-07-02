@@ -148,7 +148,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     ),
                     const SizedBox(height: 10),
                     const Text(
-                      'ServiciosYa',
+                      'YALO',
                       style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.w800,

@@ -259,7 +259,7 @@ class LevelComparisonSheet extends StatelessWidget {
               ),
             ),
           ),
-          const Text('Niveles de ServiciosYa',
+          const Text('Niveles de YALO',
               style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700)),
           const SizedBox(height: 4),
           const Text('Más trabajos = menor comisión = más ganancias',

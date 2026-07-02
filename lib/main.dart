@@ -37,7 +37,7 @@ void main() async {
 
     runApp(
       const ProviderScope(
-        child: ServiciosYaApp(),
+        child: YALOApp(),
       ),
     );
   });

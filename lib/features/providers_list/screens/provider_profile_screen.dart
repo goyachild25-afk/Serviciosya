@@ -100,7 +100,7 @@ class ProviderProfileScreen extends ConsumerWidget {
                 onTap: () async {
                   Navigator.pop(ctx);
                   final msg =
-                      'Te recomiendo a ${provider.fullName} en ServiciosYa 🏠 — ${_providerShareLink()}';
+                      '¿Ya lo resolviste? ${provider.fullName} en YALO puede ayudarte 🏠 ${_providerShareLink()}';
                   await launchUrl(
                     Uri.parse('https://wa.me/?text=${Uri.encodeComponent(msg)}'),
                     mode: LaunchMode.externalApplication,

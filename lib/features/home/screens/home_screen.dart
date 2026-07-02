@@ -240,7 +240,7 @@ class _HeroHeader extends ConsumerWidget {
               ),
               const SizedBox(height: 14),
               const Text(
-                'Profesionales verificados\npara tu hogar',
+                '¿Ya lo resolviste?\nCon YALO, sí.',
                 style: TextStyle(
                   color: Colors.white,
                   fontSize: 24,
@@ -283,7 +283,7 @@ class _CollapsedTitle extends StatelessWidget {
           ),
           const SizedBox(width: 10),
           const Text(
-            'ServiciosYa',
+            'YALO',
             style: TextStyle(
               color: Colors.white,
               fontSize: 16,
@@ -651,7 +651,7 @@ class _TrustSection extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const Text(
-          '¿Por qué ServiciosYa?',
+          '¿Por qué YALO?',
           style: TextStyle(
             fontSize: 18,
             fontWeight: FontWeight.w700,

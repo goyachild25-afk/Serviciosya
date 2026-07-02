@@ -694,7 +694,7 @@ class _BookingScreenState extends ConsumerState<BookingScreen> {
   Widget _buildPriceSummary() {
     final isFixed = _selectedService!.pricingType == PricingType.fixed;
     final basePrice = isFixed ? (_selectedService!.fixedPrice ?? 0.0) : null;
-    // Comisión 5%+5%: el precio mostrado al cliente incluye la Garantía ServiciosYa
+    // Comisión 5%+5%: el precio mostrado al cliente incluye la Garantía YALO
     final clientTotal = basePrice != null ? basePrice * 1.05 : null;
     final providerNet  = basePrice != null ? basePrice * 0.95 : null;
 
@@ -731,13 +731,13 @@ class _BookingScreenState extends ConsumerState<BookingScreen> {
               ],
             ),
             const SizedBox(height: 4),
-            // Garantía ServiciosYa (5%)
+            // Garantía YALO (5%)
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Row(
                   children: [
-                    const Text('Garantía ServiciosYa',
+                    const Text('Garantía YALO',
                         style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
                     const SizedBox(width: 4),
                     Container(
@@ -805,7 +805,7 @@ class _BookingScreenState extends ConsumerState<BookingScreen> {
             const Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text('Garantía ServiciosYa',
+                Text('Garantía YALO',
                     style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
                 Text('5% sobre precio acordado',
                     style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),

@@ -2,7 +2,7 @@ import 'package:flutter/foundation.dart';
 
 /// Centralized logging service for error tracking and debugging
 class LoggingService {
-  static const String _prefix = '[ServiciosYa]';
+  static const String _prefix = '[YALO]';
 
   /// Log info messages
   static void info(String message, [dynamic error]) {

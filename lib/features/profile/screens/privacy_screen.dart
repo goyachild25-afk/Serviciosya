@@ -57,7 +57,7 @@ class _PrivacyScreenState extends ConsumerState<PrivacyScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
               content: Text(
-                  'No pudimos generar tu archivo. Intenta de nuevo o escribe a privacidad@serviciosya.do')),
+                  'No pudimos generar tu archivo. Intenta de nuevo o escribe a privacidad@yalo.do')),
         );
       }
     } finally {
@@ -113,7 +113,7 @@ class _PrivacyScreenState extends ConsumerState<PrivacyScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
               content: Text(
-                  'No pudimos eliminar tu cuenta. Escribe a privacidad@serviciosya.do para asistencia manual.')),
+                  'No pudimos eliminar tu cuenta. Escribe a privacidad@yalo.do para asistencia manual.')),
         );
       }
     } finally {
@@ -149,7 +149,7 @@ class _PrivacyScreenState extends ConsumerState<PrivacyScreen> {
             color: AppColors.primary,
             title: 'Descargar mis datos',
             description:
-                'Obtén un archivo JSON con toda la información que ServiciosYa tiene sobre ti (perfil, reservas, chat, reseñas).',
+                'Obtén un archivo JSON con toda la información que YALO tiene sobre ti (perfil, reservas, chat, reseñas).',
             actionLabel: 'Descargar',
             loading: _exporting,
             onTap: _exportData,
@@ -179,7 +179,7 @@ class _PrivacyScreenState extends ConsumerState<PrivacyScreen> {
             onTap: () async {
               final uri = Uri(
                 scheme: 'mailto',
-                path: 'privacidad@serviciosya.do',
+                path: 'privacidad@yalo.do',
                 query: 'subject=Oposicion%20al%20tratamiento%20de%20mis%20datos',
               );
               await launchUrl(uri, mode: LaunchMode.externalApplication);
@@ -210,7 +210,7 @@ class _PrivacyScreenState extends ConsumerState<PrivacyScreen> {
           ),
           const SizedBox(height: 4),
           const Text(
-            'privacidad@serviciosya.do\nRespuesta dentro de 15 días hábiles.',
+            'privacidad@yalo.do\nRespuesta dentro de 15 días hábiles.',
             style: TextStyle(fontSize: 12, color: AppColors.textHint),
           ),
         ],

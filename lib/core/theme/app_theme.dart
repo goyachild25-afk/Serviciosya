@@ -3,7 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../constants/app_colors.dart';
 
-/// Tema "Brisa Caribeña" — ServiciosYa
+/// Tema "Brisa Caribeña" — YALO
 ///
 /// Tipografía dual:
 ///   Playfair Display → títulos hero y display  (elegancia, lujo tropical)

@@ -40,7 +40,7 @@ class MaintenanceScreen extends ConsumerWidget {
               ),
               const SizedBox(height: 32),
               const Text(
-                'Estamos afinando ServiciosYa',
+                'Estamos afinando YALO',
                 style: TextStyle(
                   fontSize: 24,
                   fontWeight: FontWeight.w700,

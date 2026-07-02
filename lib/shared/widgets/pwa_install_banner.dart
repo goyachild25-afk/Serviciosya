@@ -63,7 +63,7 @@ class _PwaInstallBannerState extends State<PwaInstallBanner> {
             const Icon(Icons.ios_share, size: 40, color: AppColors.primary),
             const SizedBox(height: 12),
             const Text(
-              'Instalar ServiciosYa',
+              'Instalar YALO',
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
             ),
             const SizedBox(height: 16),
@@ -136,7 +136,7 @@ class _PwaInstallBannerState extends State<PwaInstallBanner> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: const [
                 Text(
-                  'Instala ServiciosYa',
+                  'Instala YALO',
                   style: TextStyle(
                     color: Colors.white,
                     fontWeight: FontWeight.w700,

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-/// Sistema de color "Brisa Caribeña" — ServiciosYa
+/// Sistema de color "Brisa Caribeña" — YALO
 ///
 /// Inspirado en la naturaleza de República Dominicana:
 ///   primary   → azul profundo del Caribe   (confianza, seguridad, océano)

@@ -116,7 +116,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         builder: (ctx) => AlertDialog(
           title: const Text('Compartir contacto no está permitido'),
           content: Text(
-            'Detectamos $reason en tu mensaje. Por tu seguridad y la del prestador, coordinamos todo dentro de ServiciosYa (chat, pago, garantía).\n\n'
+            'Detectamos $reason en tu mensaje. Por tu seguridad y la del prestador, coordinamos todo dentro de YALO (chat, pago, garantía).\n\n'
             'Si envías el mensaje, los datos sensibles serán ocultados con "🔒".',
           ),
           actions: [
@@ -378,7 +378,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
 
   // ── Banner de pago (solo cliente, cuando el precio está acordado) ────────────
   Widget _buildPayBanner(double agreedPrice) {
-    // El cliente reserva el precio base + 5 % de Garantía ServiciosYa
+    // El cliente reserva el precio base + 5 % de Garantía YALO
     // La tarjeta se AUTORIZA ahora; el cobro real ocurre al completar el servicio
     final total = PaymentService.clientTotal(agreedPrice);
     return Container(

@@ -50,7 +50,7 @@ class _HelpFabState extends ConsumerState<HelpFab> {
     if (_whatsapp == null || _whatsapp!.isEmpty) return;
     setState(() => _loading = true);
     final msg =
-        'Hola, necesito ayuda con ServiciosYa. Estoy en: ${widget.screenLabel}';
+        'Hola, necesito ayuda con YALO. Estoy en: ${widget.screenLabel}';
     final uri = Uri.parse(
         'https://wa.me/${_whatsapp!}?text=${Uri.encodeComponent(msg)}');
     try {

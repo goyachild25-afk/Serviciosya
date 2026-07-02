@@ -17,7 +17,7 @@ class _SupportContact {
   });
 
   static const _SupportContact fallback = _SupportContact(
-    email: 'soporte@serviciosya.do',
+    email: 'soporte@yalo.do',
     whatsapp: '18095550000',
     hours: 'Lunes a viernes, 8am – 6pm',
   );
@@ -113,12 +113,12 @@ class HelpScreen extends ConsumerWidget {
           const _FAQItem(
             question: '¿Cuánto cobra la plataforma?',
             answer:
-                'ServiciosYa cobra una comisión total del 10%: un 5% de Garantía ServiciosYa lo paga el cliente, y un 5% de Membresía de Visibilidad se descuenta al prestador. El prestador recibe el 95% del precio base acordado.',
+                'YALO cobra una comisión total del 10%: un 5% de Garantía YALO lo paga el cliente, y un 5% de Membresía de Visibilidad se descuenta al prestador. El prestador recibe el 95% del precio base acordado.',
           ),
           const _FAQItem(
             question: '¿Cómo verifico mi identidad como prestador?',
             answer:
-                'Ve a tu perfil → "Verificar mi identidad". Necesitarás tu número de cédula, una foto del frente y reverso de tu cédula, y una selfie. El equipo de ServiciosYa revisará tu solicitud en 24-48 horas.',
+                'Ve a tu perfil → "Verificar mi identidad". Necesitarás tu número de cédula, una foto del frente y reverso de tu cédula, y una selfie. El equipo de YALO revisará tu solicitud en 24-48 horas.',
           ),
           const SizedBox(height: 28),
 
@@ -135,7 +135,7 @@ class HelpScreen extends ConsumerWidget {
               Uri(
                 scheme: 'mailto',
                 path: contact.email,
-                query: 'subject=Consulta%20ServiciosYa',
+                query: 'subject=Consulta%20YALO',
               ),
               'No se pudo abrir el correo. Puedes escribirnos a ${contact.email}',
             ),
@@ -149,7 +149,7 @@ class HelpScreen extends ConsumerWidget {
             onTap: () => _launchOrToast(
               context,
               Uri.parse(
-                'https://wa.me/${contact.whatsapp}?text=${Uri.encodeComponent("Hola, necesito ayuda con ServiciosYa.")}',
+                'https://wa.me/${contact.whatsapp}?text=${Uri.encodeComponent("Hola, necesito ayuda con YALO.")}',
               ),
               'No se pudo abrir WhatsApp. Puedes escribir a +${contact.whatsapp}',
             ),
@@ -191,7 +191,7 @@ class HelpScreen extends ConsumerWidget {
                 Icon(Icons.cleaning_services_rounded,
                     color: AppColors.primary, size: 32),
                 SizedBox(height: 8),
-                Text('ServiciosYa',
+                Text('YALO',
                     style: TextStyle(
                         fontWeight: FontWeight.w600,
                         color: AppColors.textPrimary)),

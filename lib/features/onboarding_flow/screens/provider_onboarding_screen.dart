@@ -918,7 +918,7 @@ class _Step1Verification extends StatelessWidget {
                   SizedBox(width: 10),
                   Expanded(
                     child: Text(
-                      'Tu identidad es verificada por nuestro equipo en 24-48 h hábiles. Esto protege a toda la comunidad ServiciosYa.',
+                      'Tu identidad es verificada por nuestro equipo en 24-48 h hábiles. Esto protege a toda la comunidad YALO.',
                       style: TextStyle(
                           fontSize: 12, color: AppColors.info, height: 1.4),
                     ),

@@ -339,7 +339,7 @@ class _RateClientScreenState extends ConsumerState<RateClientScreen> {
         ),
         const SizedBox(height: 12),
         const Text(
-          'Tu opinión ayuda a construir una comunidad más\nsegura y confiable en ServiciosYa.',
+          'Tu opinión ayuda a construir una comunidad más\nsegura y confiable en YALO.',
           style: TextStyle(
             fontSize: 14,
             color: AppColors.textSecondary,

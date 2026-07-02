@@ -11,9 +11,9 @@ class AppConstants {
   static const double defaultRadius = 50.0; // km
   static const int maxPhotosPerProfile = 6;
   // ── Modelo de comisión 5% + 5% ───────────────────────────────────────────
-  // clientFee   → "Garantía ServiciosYa"      (se añade al precio base; lo paga el cliente)
+  // clientFee   → "Garantía YALO"      (se añade al precio base; lo paga el cliente)
   // providerFee → "Membresía de Visibilidad"   (se descuenta del cobro; lo paga el prestador)
-  static const double clientFee  = 0.05; // 5% — Garantía ServiciosYa
+  static const double clientFee  = 0.05; // 5% — Garantía YALO
   static const double providerFee = 0.05; // 5% — Membresía de Visibilidad
   // Referencia de comisión total (compatible con código existente)
   static const double platformCommission = clientFee + providerFee; // 10%

@@ -1,11 +1,11 @@
 {
-    "name": "ServiciosYa",
-    "short_name": "ServiciosYa",
+    "name": "YALO",
+    "short_name": "YALO",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0077B6",
     "theme_color": "#0077B6",
-    "description": "Profesionales verificados para tu hogar en República Dominicana.",
+    "description": "¿Ya lo resolviste? Con YALO, sí. Servicios del hogar en RD.",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

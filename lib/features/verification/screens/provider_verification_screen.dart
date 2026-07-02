@@ -154,7 +154,7 @@ class _ProviderVerificationScreenState
             ),
             const SizedBox(height: 8),
             const Text(
-              'Tu documentación fue enviada. El equipo de ServiciosYa la revisará en 24-48 horas. Te notificaremos por correo cuando tu cuenta esté verificada.',
+              'Tu documentación fue enviada. El equipo de YALO la revisará en 24-48 horas. Te notificaremos por correo cuando tu cuenta esté verificada.',
               style: TextStyle(
                 fontSize: 13,
                 color: AppColors.textSecondary,
@@ -310,7 +310,7 @@ class _ProviderVerificationScreenState
               ),
               const SizedBox(height: 12),
               const Text(
-                '🔒 Tus documentos están protegidos y solo son accesibles por el equipo de ServiciosYa.',
+                '🔒 Tus documentos están protegidos y solo son accesibles por el equipo de YALO.',
                 style: TextStyle(fontSize: 11, color: AppColors.textHint),
                 textAlign: TextAlign.center,
               ),

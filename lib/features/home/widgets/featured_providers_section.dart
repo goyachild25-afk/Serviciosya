@@ -54,7 +54,7 @@ class FeaturedProvidersSection extends ConsumerWidget {
                 child: Padding(
                   padding: EdgeInsets.all(24),
                   child: Text(
-                    'Sé de los primeros prestadores en ServiciosYa — ¡regístrate ya!',
+                    'Sé de los primeros prestadores en YALO — ¡regístrate ya!',
                     style: TextStyle(color: AppColors.textSecondary),
                     textAlign: TextAlign.center,
                   ),

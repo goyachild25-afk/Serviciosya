@@ -1,5 +1,5 @@
 // ─────────────────────────────────────────────────────────────────────────────
-// OnboardingScreen — ServiciosYa
+// OnboardingScreen — YALO
 // Animaciones Lottie en assets/animations/ (generadas con colores de la app)
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -70,7 +70,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                       ),
                       const SizedBox(width: 8),
                       const Text(
-                        'ServiciosYa',
+                        'YALO',
                         style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w800,

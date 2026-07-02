@@ -1,11 +1,11 @@
-// CONFIGURACIÓN FIREBASE — ServiciosYa
+// CONFIGURACIÓN FIREBASE — YALO
 //
 // Para completar la configuración de notificaciones push:
 //
 // 1. Ir a https://console.firebase.google.com
-// 2. Crear proyecto "ServiciosYa" (o usar uno existente)
+// 2. Crear proyecto "YALO" (o usar uno existente)
 // 3. Agregar app Web:
-//    - Nombre: ServiciosYa Web
+//    - Nombre: YALO Web
 //    - Copiar los valores en la sección WEB abajo
 // 4. Para Android:
 //    - Package name: com.serviciosya.app

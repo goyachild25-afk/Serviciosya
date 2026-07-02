@@ -1,5 +1,5 @@
 name: servicios_ya
-description: ServiciosYa — Plataforma multi-servicio del hogar para República Dominicana.
+description: YALO — Servicios del hogar para República Dominicana. (El identificador del paquete se mantiene como 'servicios_ya' por compatibilidad de imports internos; el nombre visible al usuario es YALO.)
 publish_to: 'none'
 version: 1.0.0+1
 

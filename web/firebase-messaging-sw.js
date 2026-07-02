@@ -1,4 +1,4 @@
-// Firebase Messaging Service Worker — ServiciosYa
+// Firebase Messaging Service Worker — YALO
 // Este archivo maneja notificaciones push cuando la app está cerrada o en background.
 //
 // IMPORTANTE: Reemplazar los valores de configuración con los de tu proyecto Firebase.
@@ -21,7 +21,7 @@ const messaging = firebase.messaging();
 
 // Mostrar notificación en background
 messaging.onBackgroundMessage((payload) => {
-  const title = payload.notification?.title ?? 'ServiciosYa';
+  const title = payload.notification?.title ?? 'YALO';
   const body  = payload.notification?.body  ?? '';
   const icon  = '/icons/Icon-192.png';
 

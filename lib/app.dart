@@ -5,8 +5,8 @@ import 'core/services/accessibility_service.dart';
 import 'core/services/live_notifications_service.dart';
 import 'core/theme/app_theme.dart';
 
-class ServiciosYaApp extends ConsumerWidget {
-  const ServiciosYaApp({super.key});
+class YALOApp extends ConsumerWidget {
+  const YALOApp({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -15,7 +15,7 @@ class ServiciosYaApp extends ConsumerWidget {
     final themeMode = ref.watch(themeModeProvider);
 
     return MaterialApp.router(
-      title: 'ServiciosYa',
+      title: 'YALO',
       theme: AppTheme.light,
       darkTheme: AppTheme.dark,
       themeMode: themeMode.mode,

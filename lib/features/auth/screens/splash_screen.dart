@@ -109,7 +109,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
                   ),
                   const SizedBox(height: 24),
                   const Text(
-                    'ServiciosYa',
+                    'YALO',
                     style: TextStyle(
                       fontSize: 36,
                       fontWeight: FontWeight.w700,

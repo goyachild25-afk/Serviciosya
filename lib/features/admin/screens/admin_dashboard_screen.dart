@@ -2817,7 +2817,7 @@ class _RevenueCard extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Garantía ServiciosYa (5% cliente): '
+                      'Garantía YALO (5% cliente): '
                       'RD\$${NumberFormat('#,###').format(clientFeeTotal.toInt())}',
                       style: const TextStyle(color: Colors.white70, fontSize: 11),
                     ),
@@ -2828,7 +2828,7 @@ class _RevenueCard extends StatelessWidget {
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      'Total comisión ServiciosYa: '
+                      'Total comisión YALO: '
                       'RD\$${NumberFormat('#,###').format(totalCommission.toInt())}',
                       style: const TextStyle(
                           color: Colors.white,
