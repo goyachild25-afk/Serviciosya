@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import 'package:shimmer/shimmer.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:geolocator/geolocator.dart';
+import '../../../core/services/user_location_service.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/services/supabase_service.dart';
 import '../../../core/services/demo_provider.dart';
@@ -366,8 +367,27 @@ class _OpenRequestsWithMapState extends ConsumerState<_OpenRequestsWithMap> {
           _categoryIds = catIds;
         });
       }
+
+      // Actualizar en background la posición real del prestador. Es lo que
+      // alimenta el orden "Más cercanos" del lado del cliente: sin
+      // coordenadas frescas, ese sort no tiene con qué trabajar.
+      _syncMyCoordinates(user.id);
     } finally {
       if (mounted) setState(() => _loadingProfile = false);
+    }
+  }
+
+  Future<void> _syncMyCoordinates(String userId) async {
+    try {
+      final pos = await ref.read(userLocationProvider.future);
+      if (pos == null) return;
+      await SupabaseService.client.from('provider_profiles').update({
+        'latitude': pos.latitude,
+        'longitude': pos.longitude,
+      }).eq('user_id', userId);
+    } catch (_) {
+      // Sin permiso de ubicación o sin conexión: el prestador conserva las
+      // coordenadas anteriores (o ninguna). Nunca interrumpe el dashboard.
     }
   }
 
@@ -1441,7 +1461,38 @@ class _UserLocationMapState extends ConsumerState<_UserLocationMap> {
       );
     }
 
+    // Un marcador naranja por cada solicitud abierta que trae coordenadas
+    // exactas del cliente. El prestador ve DÓNDE está cada trabajo, no solo
+    // "hay 3 en tu provincia".
+    for (final r in widget.requests) {
+      final lat = (r['client_lat'] as num?)?.toDouble();
+      final lng = (r['client_lng'] as num?)?.toDouble();
+      if (lat == null || lng == null) continue;
+      markers.add(
+        Marker(
+          markerId: MarkerId('req-${r['id']}'),
+          position: LatLng(lat, lng),
+          infoWindow: InfoWindow(
+            title: r['service_name'] as String? ?? 'Solicitud',
+            snippet: r['client_name'] as String? ?? '',
+          ),
+          icon: BitmapDescriptor.defaultMarkerWithHue(
+              BitmapDescriptor.hueOrange),
+        ),
+      );
+    }
+
     setState(() => _markers = markers);
+  }
+
+  @override
+  void didUpdateWidget(covariant _UserLocationMap oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // El stream de solicitudes es Realtime: si entra una nueva mientras el
+    // mapa está abierto, sus pines deben aparecer sin recargar.
+    if (!identical(oldWidget.requests, widget.requests)) {
+      _updateMarkers();
+    }
   }
 
   @override

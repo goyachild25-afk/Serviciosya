@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/services/supabase_service.dart';
 import '../../../core/services/demo_provider.dart';
+import '../../../core/services/user_location_service.dart';
 import '../../../shared/widgets/custom_button.dart';
 import '../../../shared/widgets/custom_text_field.dart';
 import '../../../shared/widgets/photo_picker_grid.dart';
@@ -46,6 +47,15 @@ class _ServiceRequestScreenState extends ConsumerState<ServiceRequestScreen> {
       );
 
   @override
+  void initState() {
+    super.initState();
+    // Disparar la petición de ubicación AHORA, mientras el usuario llena el
+    // formulario: el prompt de permiso aparece con contexto ("estoy pidiendo
+    // un servicio a domicilio") y la posición ya está resuelta al enviar.
+    Future.microtask(() => ref.read(userLocationProvider.future));
+  }
+
+  @override
   void dispose() {
     _addressCtrl.dispose();
     _notesCtrl.dispose();
@@ -70,6 +80,20 @@ class _ServiceRequestScreenState extends ConsumerState<ServiceRequestScreen> {
     // ── Supabase real ─────────────────────────────────────────────────────────
     try {
       final user = SupabaseService.currentUser!;
+
+      // Posición exacta del cliente (best-effort, nunca bloquea el envío).
+      // El provider ya se disparó en initState; aquí solo esperamos 2s por si
+      // el fix GPS aún no llegó. Sin permiso → null → el prestador ve solo
+      // la dirección escrita y la provincia, como antes.
+      double? clientLat;
+      double? clientLng;
+      try {
+        final pos = await ref
+            .read(userLocationProvider.future)
+            .timeout(const Duration(seconds: 2));
+        clientLat = pos?.latitude;
+        clientLng = pos?.longitude;
+      } catch (_) {}
 
       final profile = await SupabaseService.client
           .from('profiles')
@@ -103,6 +127,8 @@ class _ServiceRequestScreenState extends ConsumerState<ServiceRequestScreen> {
                     : null,
             'service_photos':
                 _servicePhotoUrls.isEmpty ? null : _servicePhotoUrls,
+            if (clientLat != null) 'client_lat': clientLat,
+            if (clientLng != null) 'client_lng': clientLng,
             'created_at': DateTime.now().toIso8601String(),
           })
           .select('id')

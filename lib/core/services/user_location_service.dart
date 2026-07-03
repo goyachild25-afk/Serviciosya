@@ -6,9 +6,10 @@ import 'package:geolocator/geolocator.dart';
 /// rechaza el permiso el provider devuelve null y todo lo dependiente
 /// (ordenamiento por cercanía, distancia en la card) simplemente no aparece.
 ///
-/// Usamos precisión `low` porque solo la necesitamos para ordenar prestadores
-/// y esa precisión ahorra batería + funciona en más navegadores/dispositivos
-/// que `high`.
+/// Precisión `high`: la posición se usa para centrar mapas, marcar dónde
+/// está el trabajo del cliente y ordenar prestadores por cercanía — todos
+/// casos donde "aproximado a nivel de barrio" no basta. El costo de batería
+/// es puntual (una lectura por sesión, no streaming).
 final userLocationProvider = FutureProvider<Position?>((ref) async {
   try {
     final serviceEnabled = await Geolocator.isLocationServiceEnabled();
@@ -24,10 +25,16 @@ final userLocationProvider = FutureProvider<Position?>((ref) async {
     }
     if (permission == LocationPermission.deniedForever) return null;
 
-    return await Geolocator.getCurrentPosition(
-      desiredAccuracy: LocationAccuracy.low,
-      timeLimit: const Duration(seconds: 8),
-    );
+    try {
+      return await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.high,
+        timeLimit: const Duration(seconds: 10),
+      );
+    } on Exception {
+      // El fix GPS de alta precisión puede tardar más que el timeout en
+      // interiores; caer a la última posición conocida antes que a nada.
+      return await Geolocator.getLastKnownPosition();
+    }
   } catch (_) {
     return null;
   }

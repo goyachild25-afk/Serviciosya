@@ -98,25 +98,31 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     if (!_formKey.currentState!.validate()) return;
     setState(() => _isSaving = true);
     try {
-      // Upload avatar if a new one was picked
+      // Upload avatar if a new one was picked.
+      //
+      // La ruta DEBE ser una carpeta con el uid ('<uid>/archivo') porque las
+      // políticas RLS de storage validan (storage.foldername(name))[1] ==
+      // auth.uid(). La versión anterior subía a '<uid>_avatar.jpg' (raíz del
+      // bucket) y el upload fallaba siempre — silenciado por un catch vacío,
+      // así que el usuario veía "Perfil actualizado" sin foto.
+      //
+      // Nombre con timestamp: evita necesitar upsert (que dispara la política
+      // de UPDATE) y de paso rompe el caché de CachedNetworkImage sin
+      // configuración extra.
       String? newAvatarUrl;
       if (_avatarBytes != null) {
-        try {
-          final path = '${user.id}_avatar.${_avatarExt ?? 'jpg'}';
-          await SupabaseService.client.storage.from('avatars').uploadBinary(
-            path,
-            _avatarBytes!,
-            fileOptions: FileOptions(
-              upsert: true,
-              contentType: _avatarExt == 'png' ? 'image/png' : 'image/jpeg',
-            ),
-          );
-          newAvatarUrl = SupabaseService.client.storage
-              .from('avatars')
-              .getPublicUrl(path);
-        } catch (_) {
-          // Storage bucket may not exist yet — skip avatar upload silently
-        }
+        final ts = DateTime.now().millisecondsSinceEpoch;
+        final path = '${user.id}/avatar-$ts.${_avatarExt ?? 'jpg'}';
+        await SupabaseService.client.storage.from('avatars').uploadBinary(
+          path,
+          _avatarBytes!,
+          fileOptions: FileOptions(
+            contentType: _avatarExt == 'png' ? 'image/png' : 'image/jpeg',
+          ),
+        );
+        newAvatarUrl = SupabaseService.client.storage
+            .from('avatars')
+            .getPublicUrl(path);
       }
 
       await SupabaseService.client.from('profiles').update({
@@ -126,6 +132,21 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         'province': _selectedProvince,
         if (newAvatarUrl != null) 'avatar_url': newAvatarUrl,
       }).eq('id', user.id);
+
+      // Los prestadores tienen un segundo perfil (provider_profiles) cuyo
+      // avatar es el que ven los clientes en búsquedas, tarjetas y reservas.
+      // Sin esta sincronización, el prestador se cambia la foto y los
+      // clientes siguen viendo la inicial de su nombre.
+      if (user.role == UserRole.provider) {
+        try {
+          await SupabaseService.client.from('provider_profiles').update({
+            'full_name': _nameCtrl.text.trim(),
+            if (newAvatarUrl != null) 'avatar_url': newAvatarUrl,
+          }).eq('user_id', user.id);
+        } catch (_) {
+          // El perfil de prestador puede no existir aún (onboarding a medias)
+        }
+      }
 
       ref.invalidate(currentUserProvider);
       setState(() => _isEditing = false);
@@ -137,11 +158,12 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
           ),
         );
       }
-    } catch (e) {
+    } catch (_) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error: $e'),
+          const SnackBar(
+            content: Text(
+                'No pudimos guardar los cambios. Revisa tu conexión e intenta de nuevo.'),
             backgroundColor: AppColors.error,
           ),
         );

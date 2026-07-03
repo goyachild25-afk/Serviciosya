@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../../core/constants/app_colors.dart';
@@ -185,18 +186,18 @@ class HelpScreen extends ConsumerWidget {
           const SizedBox(height: 28),
 
           // ── Versión ──────────────────────────────────────────
-          const Center(
+          Center(
             child: Column(
               children: [
-                Icon(Icons.cleaning_services_rounded,
-                    color: AppColors.primary, size: 32),
-                SizedBox(height: 8),
-                Text('YALO',
+                SvgPicture.asset('assets/images/logo.svg',
+                    width: 44, height: 44),
+                const SizedBox(height: 8),
+                const Text('YALO',
                     style: TextStyle(
                         fontWeight: FontWeight.w600,
                         color: AppColors.textPrimary)),
-                SizedBox(height: 4),
-                Text('Versión 1.0.0',
+                const SizedBox(height: 4),
+                const Text('Versión 1.0.0',
                     style: TextStyle(
                         fontSize: 12, color: AppColors.textHint)),
               ],

@@ -694,29 +694,101 @@ class _VerificationCard extends StatelessWidget {
   }
 }
 
-class _DocPhoto extends StatelessWidget {
+class _DocPhoto extends StatefulWidget {
   final String? url;
   final String label;
   const _DocPhoto({required this.url, required this.label});
+
+  @override
+  State<_DocPhoto> createState() => _DocPhotoState();
+}
+
+class _DocPhotoState extends State<_DocPhoto> {
+  String? _signedUrl;
+
+  @override
+  void initState() {
+    super.initState();
+    _resolve();
+  }
+
+  /// El bucket 'verification-docs' es PRIVADO (contiene cédulas), pero el
+  /// flujo de verificación guardó URLs "públicas" que devuelven 400 en un
+  /// bucket privado — por eso el panel mostraba placeholders grises en vez
+  /// de los documentos. Extraemos el path del objeto y generamos una URL
+  /// firmada de 1 hora (la política verdocs_admin_read nos da acceso).
+  Future<void> _resolve() async {
+    final raw = widget.url;
+    if (raw == null || raw.isEmpty) return;
+    const marker = '/verification-docs/';
+    final idx = raw.indexOf(marker);
+    if (idx == -1) {
+      // URL de otro bucket (público) → usarla tal cual
+      if (mounted) setState(() => _signedUrl = raw);
+      return;
+    }
+    try {
+      final path = Uri.decodeComponent(
+          raw.substring(idx + marker.length).split('?').first);
+      final signed = await SupabaseService.client.storage
+          .from('verification-docs')
+          .createSignedUrl(path, 3600);
+      if (mounted) setState(() => _signedUrl = signed);
+    } catch (_) {
+      // Sin permiso o el objeto no existe → queda el placeholder
+    }
+  }
+
+  void _openFullScreen() {
+    if (_signedUrl == null) return;
+    showDialog(
+      context: context,
+      builder: (_) => Dialog(
+        backgroundColor: Colors.black87,
+        insetPadding: const EdgeInsets.all(12),
+        child: Stack(
+          children: [
+            InteractiveViewer(
+              maxScale: 5,
+              child: Center(
+                child: CachedNetworkImage(imageUrl: _signedUrl!),
+              ),
+            ),
+            Positioned(
+              top: 8,
+              right: 8,
+              child: IconButton(
+                icon: const Icon(Icons.close, color: Colors.white),
+                onPressed: () => Navigator.of(context).pop(),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
     return Expanded(
       child: Column(
         children: [
-          ClipRRect(
-            borderRadius: BorderRadius.circular(8),
-            child: url != null
-                ? CachedNetworkImage(
-                    imageUrl: url!,
-                    height: 70,
-                    fit: BoxFit.cover,
-                    errorWidget: (_, __, ___) => _placeholder(),
-                  )
-                : _placeholder(),
+          GestureDetector(
+            onTap: _openFullScreen,
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(8),
+              child: _signedUrl != null
+                  ? CachedNetworkImage(
+                      imageUrl: _signedUrl!,
+                      height: 70,
+                      fit: BoxFit.cover,
+                      errorWidget: (_, __, ___) => _placeholder(),
+                    )
+                  : _placeholder(),
+            ),
           ),
           const SizedBox(height: 4),
-          Text(label,
+          Text(widget.label,
               style: const TextStyle(
                   fontSize: 10, color: AppColors.textSecondary)),
         ],
