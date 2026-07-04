@@ -70,6 +70,8 @@ class ChatScreen extends ConsumerStatefulWidget {
 
 class _ChatScreenState extends ConsumerState<ChatScreen> {
   final _textCtrl = TextEditingController();
+  // Avatar del interlocutor, resuelto en build desde el stream de la reserva
+  String? _otherAvatarUrl;
   final _scrollCtrl = ScrollController();
   bool _sending = false;
 
@@ -556,6 +558,11 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       if (booking?['negotiation_status'] == 'agreed') {
         agreedPrice = (booking!['agreed_price'] as num?)?.toDouble();
       }
+      // Foto de perfil del otro lado (para AppBar y burbujas): la reserva
+      // guarda ambas al crearse/aceptarse.
+      _otherAvatarUrl = widget.isProvider
+          ? (booking?['client_avatar_url'] as String?)
+          : (booking?['provider_avatar_url'] as String?);
     } else {
       for (final msg in _demoLocalMessages.reversed) {
         if (msg.type == MessageType.offerAccepted) {
@@ -577,21 +584,38 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         titleSpacing: 0,
         elevation: 1,
         shadowColor: Colors.black12,
+        // Volver: si el chat es la única pantalla del stack (llegó desde el
+        // radar o desde una notificación), ir al inicio en vez de fallar.
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () {
+            if (context.canPop()) {
+              context.pop();
+            } else {
+              context.go('/home');
+            }
+          },
+        ),
         title: Row(
           children: [
             CircleAvatar(
               radius: 18,
               backgroundColor: AppColors.primaryLighter,
-              child: Text(
-                widget.otherUserName.isNotEmpty
-                    ? widget.otherUserName[0].toUpperCase()
-                    : '?',
-                style: const TextStyle(
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.primary,
-                  fontSize: 14,
-                ),
-              ),
+              backgroundImage: _otherAvatarUrl != null && _otherAvatarUrl!.isNotEmpty
+                  ? NetworkImage(_otherAvatarUrl!)
+                  : null,
+              child: _otherAvatarUrl == null || _otherAvatarUrl!.isEmpty
+                  ? Text(
+                      widget.otherUserName.isNotEmpty
+                          ? widget.otherUserName[0].toUpperCase()
+                          : '?',
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.primary,
+                        fontSize: 14,
+                      ),
+                    )
+                  : null,
             ),
             const SizedBox(width: 12),
             Expanded(
@@ -708,6 +732,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
             message: msg,
             isMine: msg.isMine(currentUserId),
             isProvider: widget.isProvider,
+            otherAvatarUrl: _otherAvatarUrl,
             onAcceptOffer: _acceptOffer,
             onCounterOffer: _sendCounterOffer,
             onAcceptCounterOffer: _acceptCounterOffer,
@@ -891,6 +916,7 @@ class _MessageBubble extends StatelessWidget {
   final ChatMessage message;
   final bool isMine;
   final bool isProvider;
+  final String? otherAvatarUrl;
   final void Function(double price) onAcceptOffer;
   final void Function(double offerPrice) onCounterOffer;
   final void Function(double price) onAcceptCounterOffer;
@@ -900,6 +926,7 @@ class _MessageBubble extends StatelessWidget {
     required this.message,
     required this.isMine,
     required this.isProvider,
+    this.otherAvatarUrl,
     required this.onAcceptOffer,
     required this.onCounterOffer,
     required this.onAcceptCounterOffer,
@@ -937,15 +964,21 @@ class _MessageBubble extends StatelessWidget {
             CircleAvatar(
               radius: 14,
               backgroundColor: AppColors.primaryLighter,
-              child: Text(
-                message.senderName.isNotEmpty
-                    ? message.senderName[0].toUpperCase()
-                    : '?',
-                style: const TextStyle(
-                    fontSize: 10,
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.primary),
-              ),
+              backgroundImage:
+                  otherAvatarUrl != null && otherAvatarUrl!.isNotEmpty
+                      ? NetworkImage(otherAvatarUrl!)
+                      : null,
+              child: otherAvatarUrl == null || otherAvatarUrl!.isEmpty
+                  ? Text(
+                      message.senderName.isNotEmpty
+                          ? message.senderName[0].toUpperCase()
+                          : '?',
+                      style: const TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.primary),
+                    )
+                  : null,
             ),
             const SizedBox(width: 6),
           ],

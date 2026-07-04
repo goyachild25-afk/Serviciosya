@@ -97,7 +97,7 @@ class _ServiceRequestScreenState extends ConsumerState<ServiceRequestScreen> {
 
       final profile = await SupabaseService.client
           .from('profiles')
-          .select('full_name, province')
+          .select('full_name, province, avatar_url')
           .eq('id', user.id)
           .maybeSingle();
 
@@ -109,6 +109,7 @@ class _ServiceRequestScreenState extends ConsumerState<ServiceRequestScreen> {
                 user.email?.split('@').first ??
                 'Cliente',
             'client_province': profile?['province'] as String? ?? '',
+            'client_avatar_url': profile?['avatar_url'] as String?,
             'provider_id': null,
             'provider_name': null,
             'service_id': null,

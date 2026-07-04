@@ -139,7 +139,7 @@ class _BookingScreenState extends ConsumerState<BookingScreen> {
 
       final profile = await SupabaseService.client
           .from('profiles')
-          .select('full_name')
+          .select('full_name, avatar_url')
           .eq('id', user.id)
           .single();
 
@@ -148,6 +148,7 @@ class _BookingScreenState extends ConsumerState<BookingScreen> {
           .insert({
             'client_id': user.id,
             'client_name': profile['full_name'],
+            'client_avatar_url': profile['avatar_url'],
             'provider_id': provider.id,
             'provider_name': provider.fullName,
             'provider_avatar_url': provider.avatarUrl,

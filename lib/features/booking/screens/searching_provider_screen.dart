@@ -204,8 +204,14 @@ class _SearchingProviderScreenState
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                     textStyle: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
                   ),
-                  onPressed: () => context.push(
-                    '/chat/$bookingId?name=${Uri.encodeComponent(providerName)}&service=${Uri.encodeComponent(serviceName)}'),
+                  onPressed: () {
+                    // Reconstruir el stack: la pantalla del radar ya cumplió
+                    // su función, así que "volver" desde el chat lleva al
+                    // inicio y no a esta pantalla vencida.
+                    context.go('/home');
+                    context.push(
+                        '/chat/$bookingId?name=${Uri.encodeComponent(providerName)}&service=${Uri.encodeComponent(serviceName)}');
+                  },
                 ),
               ),
               const SizedBox(height: 12),
