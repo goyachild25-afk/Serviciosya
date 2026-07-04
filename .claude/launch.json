@@ -6,6 +6,19 @@
       "runtimeExecutable": "flutter",
       "runtimeArgs": ["run", "-d", "web-server", "--web-port", "9090", "--web-hostname", "0.0.0.0"],
       "port": 9090
+    },
+    {
+      "name": "web-release-preview",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": [
+        "--yes",
+        "http-server",
+        "C:\\Users\\JJLA-\\AppData\\Local\\Temp\\claude\\C--Users-JJLA-\\6940f7d8-13e1-4931-a5db-c2b2fe329040\\scratchpad\\webroot",
+        "-p",
+        "5178",
+        "-c-1"
+      ],
+      "port": 5178
     }
   ]
 }

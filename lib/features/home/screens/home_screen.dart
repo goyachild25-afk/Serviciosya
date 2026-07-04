@@ -271,24 +271,47 @@ class _CollapsedTitle extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final user = userAsync.maybeWhen(data: (u) => u, orElse: () => null);
+
+    // El title del SliverAppBar se dibuja SIEMPRE, también con el hero
+    // expandido — y el logo+YALO caían justo encima del slogan. Leemos el
+    // progreso de colapso y mostramos la marca solo cuando la barra está
+    // (casi) contraída. La campana y el avatar quedan siempre visibles:
+    // viven a la derecha, donde no chocan con el texto.
+    final settings = context
+        .dependOnInheritedWidgetOfExactType<FlexibleSpaceBarSettings>();
+    double expandRatio = 0;
+    if (settings != null && settings.maxExtent > settings.minExtent) {
+      expandRatio = ((settings.currentExtent - settings.minExtent) /
+              (settings.maxExtent - settings.minExtent))
+          .clamp(0.0, 1.0);
+    }
+    final brandOpacity = (1 - expandRatio * 4).clamp(0.0, 1.0);
+
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
       child: Row(
         children: [
-          // Logo mini
-          SvgPicture.asset(
-            'assets/images/logo.svg',
-            width: 34,
-            height: 34,
-          ),
-          const SizedBox(width: 10),
-          const Text(
-            'YALO',
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 16,
-              fontWeight: FontWeight.w700,
-              letterSpacing: -0.2,
+          // Logo mini — solo en barra contraída
+          Opacity(
+            opacity: brandOpacity,
+            child: Row(
+              children: [
+                SvgPicture.asset(
+                  'assets/images/logo.svg',
+                  width: 34,
+                  height: 34,
+                ),
+                const SizedBox(width: 10),
+                const Text(
+                  'YALO',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: -0.2,
+                  ),
+                ),
+              ],
             ),
           ),
           const Spacer(),
