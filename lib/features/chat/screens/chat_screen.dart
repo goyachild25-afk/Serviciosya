@@ -13,6 +13,7 @@ import '../providers/chat_presence.dart';
 import '../../../core/utils/anti_spam.dart';
 import '../../../core/utils/map_launcher.dart';
 import '../../../core/services/user_location_service.dart';
+import '../../../shared/widgets/avatar_viewer.dart';
 
 final chatMessagesProvider =
     StreamProvider.family<List<ChatMessage>, String>((ref, bookingId) {
@@ -598,24 +599,30 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         ),
         title: Row(
           children: [
-            CircleAvatar(
-              radius: 18,
-              backgroundColor: AppColors.primaryLighter,
-              backgroundImage: _otherAvatarUrl != null && _otherAvatarUrl!.isNotEmpty
-                  ? NetworkImage(_otherAvatarUrl!)
-                  : null,
-              child: _otherAvatarUrl == null || _otherAvatarUrl!.isEmpty
-                  ? Text(
-                      widget.otherUserName.isNotEmpty
-                          ? widget.otherUserName[0].toUpperCase()
-                          : '?',
-                      style: const TextStyle(
-                        fontWeight: FontWeight.w700,
-                        color: AppColors.primary,
-                        fontSize: 14,
-                      ),
-                    )
-                  : null,
+            // Un toque en la foto → verla en grande (estilo Instagram)
+            GestureDetector(
+              onTap: () => showAvatarViewer(context,
+                  url: _otherAvatarUrl, name: widget.otherUserName),
+              child: CircleAvatar(
+                radius: 18,
+                backgroundColor: AppColors.primaryLighter,
+                backgroundImage:
+                    _otherAvatarUrl != null && _otherAvatarUrl!.isNotEmpty
+                        ? NetworkImage(_otherAvatarUrl!)
+                        : null,
+                child: _otherAvatarUrl == null || _otherAvatarUrl!.isEmpty
+                    ? Text(
+                        widget.otherUserName.isNotEmpty
+                            ? widget.otherUserName[0].toUpperCase()
+                            : '?',
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.primary,
+                          fontSize: 14,
+                        ),
+                      )
+                    : null,
+              ),
             ),
             const SizedBox(width: 12),
             Expanded(
@@ -961,24 +968,28 @@ class _MessageBubble extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [
           if (!isMine) ...[
-            CircleAvatar(
-              radius: 14,
-              backgroundColor: AppColors.primaryLighter,
-              backgroundImage:
-                  otherAvatarUrl != null && otherAvatarUrl!.isNotEmpty
-                      ? NetworkImage(otherAvatarUrl!)
-                      : null,
-              child: otherAvatarUrl == null || otherAvatarUrl!.isEmpty
-                  ? Text(
-                      message.senderName.isNotEmpty
-                          ? message.senderName[0].toUpperCase()
-                          : '?',
-                      style: const TextStyle(
-                          fontSize: 10,
-                          fontWeight: FontWeight.w700,
-                          color: AppColors.primary),
-                    )
-                  : null,
+            GestureDetector(
+              onTap: () => showAvatarViewer(context,
+                  url: otherAvatarUrl, name: message.senderName),
+              child: CircleAvatar(
+                radius: 14,
+                backgroundColor: AppColors.primaryLighter,
+                backgroundImage:
+                    otherAvatarUrl != null && otherAvatarUrl!.isNotEmpty
+                        ? NetworkImage(otherAvatarUrl!)
+                        : null,
+                child: otherAvatarUrl == null || otherAvatarUrl!.isEmpty
+                    ? Text(
+                        message.senderName.isNotEmpty
+                            ? message.senderName[0].toUpperCase()
+                            : '?',
+                        style: const TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.primary),
+                      )
+                    : null,
+              ),
             ),
             const SizedBox(width: 6),
           ],

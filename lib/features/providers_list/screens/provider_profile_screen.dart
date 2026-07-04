@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import 'package:timeago/timeago.dart' as timeago;
 import 'package:url_launcher/url_launcher.dart';
 import '../../../core/constants/app_colors.dart';
+import '../../../shared/widgets/avatar_viewer.dart';
 import '../../../shared/widgets/custom_button.dart';
 import '../../../shared/widgets/level_badge.dart';
 import '../../../shared/widgets/rating_stars.dart';
@@ -203,24 +204,31 @@ class ProviderProfileScreen extends ConsumerWidget {
   Widget _buildInfoHeader(ServiceProviderModel provider) {
     return Row(
       children: [
-        CircleAvatar(
-          radius: 36,
-          backgroundColor: AppColors.primaryLighter,
-          backgroundImage: provider.avatarUrl != null
-              ? CachedNetworkImageProvider(provider.avatarUrl!)
-              : null,
-          child: provider.avatarUrl == null
-              ? Text(
-                  provider.fullName.isNotEmpty
-                      ? provider.fullName[0].toUpperCase()
-                      : '?',
-                  style: const TextStyle(
-                    fontSize: 28,
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.primary,
-                  ),
-                )
-              : null,
+        // Un toque en la foto → verla en grande (estilo Instagram)
+        Builder(
+          builder: (context) => GestureDetector(
+            onTap: () => showAvatarViewer(context,
+                url: provider.avatarUrl, name: provider.fullName),
+            child: CircleAvatar(
+              radius: 36,
+              backgroundColor: AppColors.primaryLighter,
+              backgroundImage: provider.avatarUrl != null
+                  ? CachedNetworkImageProvider(provider.avatarUrl!)
+                  : null,
+              child: provider.avatarUrl == null
+                  ? Text(
+                      provider.fullName.isNotEmpty
+                          ? provider.fullName[0].toUpperCase()
+                          : '?',
+                      style: const TextStyle(
+                        fontSize: 28,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.primary,
+                      ),
+                    )
+                  : null,
+            ),
+          ),
         ),
         const SizedBox(width: 12),
         Expanded(
