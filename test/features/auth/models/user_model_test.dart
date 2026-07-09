@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:servicios_ya/features/auth/models/user_model.dart';
+import 'package:yalo/features/auth/models/user_model.dart';
 
 void main() {
   group('UserRole', () {

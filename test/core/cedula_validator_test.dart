@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:servicios_ya/core/utils/cedula_validator.dart';
+import 'package:yalo/core/utils/cedula_validator.dart';
 
 void main() {
   group('CedulaValidator', () {

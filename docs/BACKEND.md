@@ -40,7 +40,7 @@ Storage:
 
 | Función | JWT | Propósito |
 |---------|-----|-----------|
-| `notify-new-request` | sí | Web Push bidireccional: avisa a prestadores de solicitudes nuevas de su nicho/provincia, y al cliente cuando aceptan su solicitud. |
+| `notify-new-request` | sí | Web Push bidireccional (VAPID estándar, sin Firebase): avisa a prestadores de solicitudes nuevas de su nicho/provincia, y al cliente cuando aceptan su solicitud. |
 | `didit-create-session` | sí | El prestador pide una sesión de verificación de identidad; devuelve la URL de Didit para abrir. |
 | `didit-webhook` | no | Recibe el resultado de Didit; valida firma HMAC-SHA256 antes de aceptar. |
 | `purge-verification-docs` | sí | Borra fotos de cédula/selfie 90 días después de revisadas (retención de datos). |

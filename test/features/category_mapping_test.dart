@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:servicios_ya/shared/models/service_category_model.dart';
+import 'package:yalo/shared/models/service_category_model.dart';
 
 void main() {
   group('broadToGranularCategoryIds', () {

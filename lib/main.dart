@@ -5,7 +5,6 @@ import 'package:timeago/timeago.dart' as timeago;
 import 'app.dart';
 import 'core/services/observability_service.dart';
 import 'core/services/supabase_service.dart';
-import 'core/services/notification_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -26,13 +25,6 @@ void main() async {
       await SupabaseService.initialize();
     } catch (_) {
       // Sin credenciales reales → la app funciona en Modo Demo
-    }
-
-    // Inicializar Firebase (para push notifications)
-    try {
-      await NotificationService.initializeFirebase();
-    } catch (_) {
-      // Firebase no configurado aún → notificaciones no disponibles
     }
 
     runApp(
