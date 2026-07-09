@@ -62,8 +62,10 @@ final _referralStatsProvider =
 class ReferralsScreen extends ConsumerWidget {
   const ReferralsScreen({super.key});
 
+  // URL derivada de dónde corre la app (Uri.base), no fija: así el enlace
+  // sigue siendo correcto ante cualquier cambio de dominio o ruta.
   String _shareLink(String code) =>
-      'https://goyachild25-afk.github.io/Serviciosya/#/register?ref=$code';
+      '${Uri.base.origin}${Uri.base.path}#/register?ref=$code';
 
   Future<void> _shareWhatsApp(BuildContext context, String code) async {
     final msg =

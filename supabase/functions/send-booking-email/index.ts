@@ -7,7 +7,7 @@
 //
 // VARIABLES DE ENTORNO requeridas en Supabase Dashboard > Settings > Edge Functions:
 //   RESEND_API_KEY  → Obtener gratis en resend.com (100 emails/día free)
-//   FROM_EMAIL      → El email verificado en Resend (ej: noreply@serviciosya.app)
+//   FROM_EMAIL      → El email verificado en Resend (ej: noreply@yalo.do)
 //   SUPABASE_URL    → Auto-inyectado por Supabase
 //   SUPABASE_SERVICE_ROLE_KEY → Auto-inyectado por Supabase
 // ─────────────────────────────────────────────────────────────────────────────
@@ -16,7 +16,7 @@ import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY") ?? "";
-const FROM_EMAIL = Deno.env.get("FROM_EMAIL") ?? "noreply@serviciosya.app";
+const FROM_EMAIL = Deno.env.get("FROM_EMAIL") ?? "noreply@yalo.do";
 
 serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
@@ -73,22 +73,22 @@ serve(async (req: Request) => {
   <div style="max-width: 520px; margin: 0 auto; background: white; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 24px rgba(0,0,0,0.08);">
 
     <!-- Header -->
-    <div style="background: linear-gradient(135deg, #0D9488, #0F766E); padding: 32px 28px; text-align: center;">
-      <h1 style="color: white; margin: 0; font-size: 22px; font-weight: 700;">ServiciosYa</h1>
-      <p style="color: rgba(255,255,255,0.8); margin: 6px 0 0; font-size: 14px;">Plataforma de servicios del hogar</p>
+    <div style="background: linear-gradient(135deg, #0077B6, #023E8A); padding: 32px 28px; text-align: center;">
+      <h1 style="color: white; margin: 0; font-size: 22px; font-weight: 700;">YALO</h1>
+      <p style="color: rgba(255,255,255,0.8); margin: 6px 0 0; font-size: 14px;">Servicios del hogar en República Dominicana</p>
     </div>
 
     <!-- Body -->
     <div style="padding: 28px;">
       <div style="text-align: center; margin-bottom: 24px;">
-        <div style="width: 64px; height: 64px; background: #D1FAE5; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 32px;">✅</div>
+        <div style="width: 64px; height: 64px; background: #E0F4FF; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 32px;">✅</div>
         <h2 style="color: #111827; margin: 12px 0 4px; font-size: 20px;">¡Solicitud enviada!</h2>
         <p style="color: #6B7280; margin: 0; font-size: 14px;">Tu prestador revisará y confirmará en breve</p>
       </div>
 
       <div style="background: #F9FAFB; border: 1px solid #E5E7EB; border-radius: 12px; padding: 20px; margin-bottom: 20px;">
         <p style="color: #6B7280; font-size: 11px; font-weight: 600; text-transform: uppercase; margin: 0 0 12px;">Detalles de la reserva</p>
-        <p><strong>N° de reserva:</strong> #SY-${shortId}</p>
+        <p><strong>N° de reserva:</strong> #YL-${shortId}</p>
         <p><strong>Servicio:</strong> ${serviceName}</p>
         <p><strong>Prestador:</strong> ${providerName}</p>
         <p><strong>Fecha y hora:</strong> ${formattedDate}</p>
@@ -103,13 +103,13 @@ serve(async (req: Request) => {
       </div>
 
       <div style="text-align: center;">
-        <p style="color: #6B7280; font-size: 13px;">¿Necesitas ayuda? Contáctanos en <a href="mailto:soporte@serviciosya.app" style="color: #0D9488;">soporte@serviciosya.app</a></p>
+        <p style="color: #6B7280; font-size: 13px;">¿Necesitas ayuda? Contáctanos en <a href="mailto:soporte@yalo.do" style="color: #0077B6;">soporte@yalo.do</a></p>
       </div>
     </div>
 
     <!-- Footer -->
     <div style="background: #F9FAFB; padding: 16px 28px; border-top: 1px solid #E5E7EB; text-align: center;">
-      <p style="color: #9CA3AF; font-size: 11px; margin: 0;">© 2026 ServiciosYa · República Dominicana · Ley 172-13</p>
+      <p style="color: #9CA3AF; font-size: 11px; margin: 0;">© 2026 YALO · República Dominicana · Ley 172-13</p>
     </div>
   </div>
 </body>
@@ -123,9 +123,9 @@ serve(async (req: Request) => {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        from: `ServiciosYa <${FROM_EMAIL}>`,
+        from: `YALO <${FROM_EMAIL}>`,
         to: [profile.email],
-        subject: `✅ Reserva confirmada — ${serviceName} · #SY-${shortId}`,
+        subject: `✅ Reserva confirmada — ${serviceName} · #YL-${shortId}`,
         html,
       }),
     });

@@ -37,7 +37,7 @@ Deno.serve(async (req: Request) => {
     //   'amount' recibido = clientTotal = basePrice × 1.05 (ya incluye la Garantía del cliente)
     //   basePrice = amount / 1.05
     //   Membresía de Visibilidad del prestador = basePrice × 0.05
-    //   Garantía ServiciosYa del cliente = basePrice × 0.05
+    //   Garantía YALO del cliente = basePrice × 0.05
     //   applicationFee (metadato) = ambas comisiones = basePrice × 0.10
     const clientFeeFactor = 1.05;
     const basePrice = amount / clientFeeFactor;

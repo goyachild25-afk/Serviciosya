@@ -24,6 +24,7 @@ Toda la documentación vive en [`docs/`](docs/), un tema por archivo:
 
 | Documento | Contenido |
 |-----------|-----------|
+| [docs/OVERVIEW.en.md](docs/OVERVIEW.en.md) | **English overview** — what YALO is and where it's going. Start here if you're a new collaborator. |
 | [docs/ESTADO.md](docs/ESTADO.md) | **Fuente de verdad** del estado del proyecto: qué funciona, qué falta, incidentes. Se actualiza tras cada despliegue importante. |
 | [docs/ARQUITECTURA.md](docs/ARQUITECTURA.md) | Estructura del código, features por rol, navegación, gestión de estado. |
 | [docs/BACKEND.md](docs/BACKEND.md) | Supabase: tablas, RLS, Edge Functions, trabajos programados, secretos. |

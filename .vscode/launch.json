@@ -2,7 +2,7 @@
   "version": "0.2.0",
   "configurations": [
     {
-      "name": "ServiciosYa — Chrome",
+      "name": "YALO — Chrome",
       "request": "launch",
       "type": "dart",
       "program": "lib/main.dart",
@@ -10,7 +10,7 @@
       "args": ["--dart-define=FLUTTER_WEB_USE_SKIA=true"]
     },
     {
-      "name": "ServiciosYa — Windows",
+      "name": "YALO — Windows",
       "request": "launch",
       "type": "dart",
       "program": "lib/main.dart",

@@ -73,8 +73,9 @@ class ProviderProfileScreen extends ConsumerWidget {
     );
   }
 
+  // URL derivada de dónde corre la app (Uri.base), no fija.
   String _providerShareLink() =>
-      'https://goyachild25-afk.github.io/Serviciosya/#/provider/$providerId';
+      '${Uri.base.origin}${Uri.base.path}#/provider/$providerId';
 
   void _shareProvider(BuildContext context, ServiceProviderModel provider) {
     showModalBottomSheet(
