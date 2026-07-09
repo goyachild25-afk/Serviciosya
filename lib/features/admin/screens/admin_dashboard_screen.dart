@@ -546,6 +546,8 @@ class _VerificationCard extends StatelessWidget {
     final frontUrl = req['id_front_url'] as String?;
     final backUrl = req['id_back_url'] as String?;
     final selfieUrl = req['selfie_url'] as String?;
+    final hasLocalPhotos = frontUrl != null || backUrl != null || selfieUrl != null;
+    final diditStatus = req['didit_status'] as String?;
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -645,17 +647,42 @@ class _VerificationCard extends StatelessWidget {
           ),
           const SizedBox(height: 12),
 
-          // Document photos
-          Row(
-            children: [
-              _DocPhoto(url: frontUrl, label: 'Frente'),
-              const SizedBox(width: 8),
-              _DocPhoto(url: backUrl, label: 'Reverso'),
-              const SizedBox(width: 8),
-              _DocPhoto(url: selfieUrl, label: 'Selfie'),
-            ],
-          ),
-          const SizedBox(height: 16),
+          // Resultado de la verificación automática (Didit): apoyo para la
+          // revisión, nunca reemplaza el criterio del admin — los botones
+          // de Aprobar/Rechazar siguen siendo la decisión final humana.
+          if (diditStatus != null) ...[
+            _DiditResultBadge(status: diditStatus),
+            const SizedBox(height: 12),
+          ],
+
+          // Document photos (solicitudes antiguas subidas manualmente;
+          // las nuevas se capturan en la sesión hospedada de Didit y no
+          // dejan copia local — el resultado de arriba es la evidencia).
+          if (hasLocalPhotos) ...[
+            Row(
+              children: [
+                _DocPhoto(url: frontUrl, label: 'Frente'),
+                const SizedBox(width: 8),
+                _DocPhoto(url: backUrl, label: 'Reverso'),
+                const SizedBox(width: 8),
+                _DocPhoto(url: selfieUrl, label: 'Selfie'),
+              ],
+            ),
+            const SizedBox(height: 16),
+          ] else if (diditStatus == null) ...[
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: AppColors.surfaceVariant,
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: const Text(
+                'Esperando a que el prestador complete la verificación.',
+                style: TextStyle(fontSize: 11, color: AppColors.textHint),
+              ),
+            ),
+            const SizedBox(height: 16),
+          ],
 
           // Actions
           Row(
@@ -687,6 +714,59 @@ class _VerificationCard extends StatelessWidget {
                 ),
               ),
             ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Resultado de la verificación automática de Didit (OCR + liveness + face
+/// match). Es información de apoyo para el admin, no una aprobación —
+/// aunque diga "Aprobado", el admin sigue confirmando con sus propios
+/// botones antes de que el prestador quede verificado en la plataforma.
+class _DiditResultBadge extends StatelessWidget {
+  final String status;
+  const _DiditResultBadge({required this.status});
+
+  ({String label, Color color, IconData icon}) _resolve(String s) {
+    switch (s) {
+      case 'Approved':
+        return (label: 'Didit: documento e identidad verificados', color: AppColors.success, icon: Icons.verified_outlined);
+      case 'Declined':
+        return (label: 'Didit: verificación rechazada', color: AppColors.error, icon: Icons.error_outline);
+      case 'In Review':
+        return (label: 'Didit: en revisión manual de ellos', color: AppColors.warning, icon: Icons.hourglass_top_outlined);
+      case 'Expired':
+      case 'KYC Expired':
+        return (label: 'Didit: la sesión expiró sin completarse', color: AppColors.textHint, icon: Icons.timer_off_outlined);
+      case 'Abandoned':
+        return (label: 'Didit: el prestador abandonó la sesión', color: AppColors.textHint, icon: Icons.cancel_outlined);
+      case 'In Progress':
+        return (label: 'Didit: verificación en curso', color: AppColors.info, icon: Icons.autorenew);
+      default: // NOT_STARTED u otros
+        return (label: 'Didit: aún no inicia la verificación', color: AppColors.textHint, icon: Icons.schedule_outlined);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final r = _resolve(status);
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      decoration: BoxDecoration(
+        color: r.color.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: r.color.withValues(alpha: 0.3)),
+      ),
+      child: Row(
+        children: [
+          Icon(r.icon, size: 16, color: r.color),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(r.label,
+                style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: r.color)),
           ),
         ],
       ),

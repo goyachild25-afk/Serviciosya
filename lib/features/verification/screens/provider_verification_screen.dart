@@ -1,7 +1,7 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:image_picker/image_picker.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/services/supabase_service.dart';
 import '../../../core/services/demo_provider.dart';
@@ -22,9 +22,6 @@ class _ProviderVerificationScreenState
   final _formKey = GlobalKey<FormState>();
   final _idNumberCtrl = TextEditingController();
   final _bioCtrl = TextEditingController();
-  XFile? _idFrontPhoto;
-  XFile? _idBackPhoto;
-  XFile? _selfiePhoto;
   bool _isSaving = false;
   bool _consentGiven = false;
 
@@ -35,31 +32,12 @@ class _ProviderVerificationScreenState
     super.dispose();
   }
 
-  Future<void> _pickPhoto(String type) async {
-    final picker = ImagePicker();
-    final file = await picker.pickImage(
-      source: ImageSource.gallery,
-      imageQuality: 80,
-    );
-    if (file == null) return;
-    setState(() {
-      if (type == 'front') _idFrontPhoto = file;
-      if (type == 'back') _idBackPhoto = file;
-      if (type == 'selfie') _selfiePhoto = file;
-    });
-  }
-
-  Future<void> _submit() async {
+  // Captura la cédula + selfie en vivo a través del flujo hospedado de
+  // Didit (necesario para la detección de "persona real" — no se puede
+  // hacer sobre una foto ya tomada). El resultado llega después, de forma
+  // asíncrona, vía webhook — aquí solo abrimos la sesión.
+  Future<void> _startVerification() async {
     if (!_formKey.currentState!.validate()) return;
-    if (_idFrontPhoto == null || _idBackPhoto == null || _selfiePhoto == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Sube las 3 fotos requeridas'),
-          backgroundColor: AppColors.warning,
-        ),
-      );
-      return;
-    }
     if (!_consentGiven) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -75,9 +53,7 @@ class _ProviderVerificationScreenState
     final isDemo = ref.read(demoModeProvider);
     if (isDemo) {
       await Future.delayed(const Duration(seconds: 1));
-      if (mounted) {
-        _showSuccessDialog();
-      }
+      if (mounted) _showPendingDialog();
       setState(() => _isSaving = false);
       return;
     }
@@ -85,35 +61,12 @@ class _ProviderVerificationScreenState
     try {
       final user = SupabaseService.currentUser!;
 
-      // Subir fotos a Supabase Storage
-      final frontBytes = await _idFrontPhoto!.readAsBytes();
-      final backBytes = await _idBackPhoto!.readAsBytes();
-      final selfieBytes = await _selfiePhoto!.readAsBytes();
-
-      final frontUrl = await SupabaseService.uploadFile(
-        bucket: 'verification-docs',
-        path: '${user.id}/id_front.jpg',
-        bytes: frontBytes,
-      );
-      final backUrl = await SupabaseService.uploadFile(
-        bucket: 'verification-docs',
-        path: '${user.id}/id_back.jpg',
-        bytes: backBytes,
-      );
-      final selfieUrl = await SupabaseService.uploadFile(
-        bucket: 'verification-docs',
-        path: '${user.id}/selfie.jpg',
-        bytes: selfieBytes,
-      );
-
-      // Guardar en base de datos
+      // Guardar la información básica ya mismo — el resultado biométrico
+      // de Didit llegará por webhook y se enlaza por user_id.
       await SupabaseService.client.from('verification_requests').upsert({
         'user_id': user.id,
         'id_number': CedulaValidator.format(_idNumberCtrl.text.trim()),
         'bio': _bioCtrl.text.trim(),
-        'id_front_url': frontUrl,
-        'id_back_url': backUrl,
-        'selfie_url': selfieUrl,
         'status': 'pending',
         'submitted_at': DateTime.now().toIso8601String(),
         'consent_given_at': DateTime.now().toIso8601String(),
@@ -123,12 +76,23 @@ class _ProviderVerificationScreenState
           .from('provider_profiles')
           .update({'bio': _bioCtrl.text.trim()}).eq('user_id', user.id);
 
-      if (mounted) _showSuccessDialog();
+      final session = await SupabaseService.client.functions
+          .invoke('didit-create-session');
+
+      final data = session.data as Map<String, dynamic>?;
+      final url = data?['url'] as String?;
+      if (url == null) {
+        throw Exception(data?['error'] ?? 'No se pudo iniciar la verificación');
+      }
+
+      await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
+
+      if (mounted) _showPendingDialog();
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Error: $e'),
+            content: Text('No se pudo iniciar la verificación: $e'),
             backgroundColor: AppColors.error,
           ),
         );
@@ -138,7 +102,7 @@ class _ProviderVerificationScreenState
     }
   }
 
-  void _showSuccessDialog() {
+  void _showPendingDialog() {
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -159,13 +123,13 @@ class _ProviderVerificationScreenState
             ),
             const SizedBox(height: 16),
             const Text(
-              '¡Solicitud enviada!',
+              'Verificación en curso',
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 8),
             const Text(
-              'Tu documentación fue enviada. El equipo de YALO la revisará en 24-48 horas. Te notificaremos por correo cuando tu cuenta esté verificada.',
+              'Se abrió una pestaña nueva para completar la captura de tu cédula y selfie. Cuando termines ahí, tu solicitud quedará en revisión — el equipo de YALO la confirmará en 24-48 horas.',
               style: TextStyle(
                 fontSize: 13,
                 color: AppColors.textSecondary,
@@ -272,44 +236,37 @@ class _ProviderVerificationScreenState
               ),
               const SizedBox(height: 24),
 
-              _StepLabel(number: '2', label: 'Foto de tu cédula'),
-              const SizedBox(height: 12),
-              Row(
-                children: [
-                  Expanded(
-                    child: _PhotoPicker(
-                      label: 'Frente',
-                      icon: Icons.credit_card,
-                      file: _idFrontPhoto,
-                      onTap: () => _pickPhoto('front'),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: _PhotoPicker(
-                      label: 'Reverso',
-                      icon: Icons.credit_card_outlined,
-                      file: _idBackPhoto,
-                      onTap: () => _pickPhoto('back'),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 24),
-
-              _StepLabel(number: '3', label: 'Selfie sosteniendo tu cédula'),
+              _StepLabel(number: '2', label: 'Verificación de identidad'),
               const SizedBox(height: 4),
               const Text(
-                'Toma una foto tuya sosteniendo tu cédula para confirmar que eres tú.',
+                'Captura tu cédula y una selfie en vivo — se abre en una pestaña segura de nuestro proveedor de verificación.',
                 style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
               ),
               const SizedBox(height: 12),
-              _PhotoPicker(
-                label: 'Selfie con cédula',
-                icon: Icons.face_outlined,
-                file: _selfiePhoto,
-                onTap: () => _pickPhoto('selfie'),
-                fullWidth: true,
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: AppColors.surfaceVariant,
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: AppColors.border, width: 1.5),
+                ),
+                child: Column(
+                  children: [
+                    const Icon(Icons.camera_front_outlined,
+                        size: 36, color: AppColors.primary),
+                    const SizedBox(height: 10),
+                    const Text(
+                      'Cédula (frente y reverso) + selfie con detección de vida',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w500,
+                        color: AppColors.textPrimary,
+                      ),
+                    ),
+                  ],
+                ),
               ),
               const SizedBox(height: 28),
 
@@ -354,10 +311,10 @@ class _ProviderVerificationScreenState
               const SizedBox(height: 20),
 
               PrimaryButton(
-                label: 'Enviar verificación',
-                onPressed: _consentGiven ? _submit : null,
+                label: 'Verificar mi identidad',
+                onPressed: _consentGiven ? _startVerification : null,
                 isLoading: _isSaving,
-                icon: Icons.send_outlined,
+                icon: Icons.verified_user_outlined,
               ),
               const SizedBox(height: 12),
               const Text(
@@ -402,67 +359,6 @@ class _StepLabel extends StatelessWidget {
             style: const TextStyle(
                 fontWeight: FontWeight.w600, fontSize: 15)),
       ],
-    );
-  }
-}
-
-class _PhotoPicker extends StatelessWidget {
-  final String label;
-  final IconData icon;
-  final XFile? file;
-  final VoidCallback onTap;
-  final bool fullWidth;
-
-  const _PhotoPicker({
-    required this.label,
-    required this.icon,
-    this.file,
-    required this.onTap,
-    this.fullWidth = false,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final picked = file != null;
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        height: fullWidth ? 120 : 110,
-        width: fullWidth ? double.infinity : null,
-        decoration: BoxDecoration(
-          color: picked ? AppColors.successLight : AppColors.surfaceVariant,
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(
-            color: picked ? AppColors.success : AppColors.border,
-            width: 1.5,
-          ),
-        ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              picked ? Icons.check_circle : icon,
-              size: 32,
-              color: picked ? AppColors.success : AppColors.textHint,
-            ),
-            const SizedBox(height: 6),
-            Text(
-              picked ? 'Foto cargada ✓' : label,
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w500,
-                color: picked ? AppColors.success : AppColors.textSecondary,
-              ),
-              textAlign: TextAlign.center,
-            ),
-            if (!picked)
-              const Text(
-                'Toca para subir',
-                style: TextStyle(fontSize: 10, color: AppColors.textHint),
-              ),
-          ],
-        ),
-      ),
     );
   }
 }
