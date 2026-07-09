@@ -2,10 +2,16 @@
 
 > Documento vivo. Se actualiza cada vez que se despliega algo importante. Si estás leyendo esto en una sesión nueva de Claude Code: este archivo es la fuente de verdad del estado del proyecto — más confiable que memorias sueltas o docs antiguos (`ESTADO_PROYECTO_FLUTTER.md`, `CAMBIOS_REALIZADOS.md`, `TECH_AUDIT_20260624.md`, etc. quedaron obsoletos y no se actualizan más).
 
-**Última actualización:** 2026-07-08
+**Última actualización:** 2026-07-09
 **Repo:** `goyachild25-afk/Serviciosya` (nombre del repo no cambió aunque la marca sí — ver "Branding" abajo)
 **URL en producción:** https://goyachild25-afk.github.io/Serviciosya/
 **Supabase project ref:** `ivexcnunszcqoqzzdlfz`
+
+---
+
+## ⚠️ Incidente resuelto (2026-07-09): registro de usuarios caído
+
+El registro de cuentas nuevas (`/auth/v1/signup`) devolvía error 500 para el 100% de los intentos — "Database error saving new user". Causa: `public.gen_referral_code(uuid)` llamaba a `digest()` (de la extensión `pgcrypto`) sin calificar el esquema; funcionaba en el editor SQL de Supabase (cuyo `search_path` incluye `extensions`) pero fallaba en el contexto real del signup, que no lo incluye. Arreglado calificando la llamada como `extensions.digest(...)` (migración `fix_gen_referral_code_schema_qualify_digest`). Verificado con un registro real de prueba — funciona, cuenta de prueba eliminada después. Sin cambios de código Flutter, ya está en vivo (las migraciones de Supabase aplican directo, no pasan por el CI de GitHub Actions).
 
 ---
 
