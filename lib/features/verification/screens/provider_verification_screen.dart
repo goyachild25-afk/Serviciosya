@@ -8,6 +8,7 @@ import '../../../core/services/demo_provider.dart';
 import '../../../shared/widgets/custom_button.dart';
 import '../../../shared/widgets/custom_text_field.dart';
 import '../../../core/utils/cedula_validator.dart';
+import '../providers/verification_status_provider.dart';
 
 class ProviderVerificationScreen extends ConsumerStatefulWidget {
   const ProviderVerificationScreen({super.key});
@@ -144,6 +145,9 @@ class _ProviderVerificationScreenState
             width: double.infinity,
             child: ElevatedButton(
               onPressed: () {
+                // Refrescar el estado antes de intentar entrar al panel —
+                // la puerta de seguridad lo consulta al llegar.
+                ref.invalidate(myVerificationRequestProvider);
                 Navigator.pop(context);
                 context.go('/dashboard');
               },
@@ -160,10 +164,17 @@ class _ProviderVerificationScreenState
     return Scaffold(
       appBar: AppBar(
         title: const Text('Verificar mi identidad'),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => context.pop(),
-        ),
+        // La verificación es OBLIGATORIA para operar como prestador: los
+        // prestadores entran a hogares y la seguridad del cliente no es
+        // negociable. Si se llega desde el onboarding (sin stack detrás),
+        // no hay flecha de volver — el único camino es completarla.
+        automaticallyImplyLeading: false,
+        leading: context.canPop()
+            ? IconButton(
+                icon: const Icon(Icons.arrow_back),
+                onPressed: () => context.pop(),
+              )
+            : null,
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
@@ -172,6 +183,47 @@ class _ProviderVerificationScreenState
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              // ── Sesión ya iniciada: esperar el resultado ──────────────────
+              // Si el prestador abrió Didit pero el webhook aún no reporta,
+              // que no crea que tiene que llenar todo de nuevo.
+              Consumer(builder: (context, ref, _) {
+                final row =
+                    ref.watch(myVerificationRequestProvider).valueOrNull;
+                final sessionStarted = row?['didit_session_id'] != null &&
+                    !verificationGateOk(row);
+                if (!sessionStarted) return const SizedBox.shrink();
+                return Container(
+                  width: double.infinity,
+                  margin: const EdgeInsets.only(bottom: 16),
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: AppColors.infoLight,
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(
+                        color: AppColors.info.withValues(alpha: 0.4)),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Ya iniciaste una verificación. Si completaste la captura en la pestaña de nuestro proveedor, toca Actualizar — el resultado puede tardar unos segundos en llegar.',
+                        style: TextStyle(
+                            fontSize: 12,
+                            color: AppColors.textPrimary,
+                            height: 1.4),
+                      ),
+                      const SizedBox(height: 8),
+                      OutlinedButton.icon(
+                        icon: const Icon(Icons.refresh, size: 16),
+                        label: const Text('Actualizar'),
+                        onPressed: () =>
+                            ref.invalidate(myVerificationRequestProvider),
+                      ),
+                    ],
+                  ),
+                );
+              }),
+
               // Banner explicativo
               Container(
                 padding: const EdgeInsets.all(16),

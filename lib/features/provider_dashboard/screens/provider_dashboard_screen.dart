@@ -12,6 +12,7 @@ import '../../../core/services/demo_provider.dart';
 import '../../../core/services/payment_service.dart';
 import '../../../core/services/push_service.dart';
 import '../../../core/utils/map_launcher.dart';
+import '../../verification/providers/verification_status_provider.dart';
 import '../../../features/auth/providers/auth_provider.dart';
 import '../../providers_list/providers/providers_list_provider.dart';
 import '../../../shared/models/service_category_model.dart';
@@ -176,6 +177,21 @@ class ProviderDashboardScreen extends ConsumerWidget {
     final userAsync = ref.watch(currentUserProvider);
     final bookingsAsync = ref.watch(providerBookingsProvider);
 
+    // ── Puerta de seguridad: sin verificación de identidad no hay panel ──
+    // Los prestadores entran a hogares de clientes; nadie opera sin haber
+    // pasado por la captura de cédula + selfie (Didit). Si el proceso no
+    // se ha completado, el único camino es /verify-identity.
+    final verifAsync = ref.watch(myVerificationRequestProvider);
+    final verifRow = verifAsync.valueOrNull;
+    if (verifAsync.hasValue && !verificationGateOk(verifRow)) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (context.mounted) context.go('/verify-identity');
+      });
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
+
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
@@ -204,6 +220,36 @@ class ProviderDashboardScreen extends ConsumerWidget {
               error: (_, __) => const SizedBox(),
             ),
             const SizedBox(height: 16),
+
+            // ── Identidad en revisión: puede explorar, no aceptar ─────────
+            if (verifRow != null && verifRow['status'] != 'approved') ...[
+              Container(
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: AppColors.warningLight,
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(
+                      color: AppColors.warning.withValues(alpha: 0.5)),
+                ),
+                child: const Row(
+                  children: [
+                    Icon(Icons.hourglass_top_rounded,
+                        size: 22, color: AppColors.warning),
+                    SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        'Tu identidad está en revisión (24-48h). Mientras tanto puedes configurar tu perfil y servicios, pero no aceptar solicitudes — así protegemos los hogares de nuestros clientes.',
+                        style: TextStyle(
+                            fontSize: 12,
+                            color: AppColors.textPrimary,
+                            height: 1.4),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+            ],
 
             // ── Prompt si no tiene servicios configurados
             const _SetupPrompt(),
@@ -420,11 +466,20 @@ class _OpenRequestsWithMapState extends ConsumerState<_OpenRequestsWithMap> {
     try {
       final profile = await SupabaseService.client
           .from('provider_profiles')
-          .select('id, full_name, avatar_url')
+          .select('id, full_name, avatar_url, is_verified')
           .eq('user_id', user.id)
           .maybeSingle();
 
       if (profile == null) { _showSnack('Completa tu perfil de prestador primero'); return; }
+
+      // Seguridad: solo prestadores con identidad aprobada por el equipo
+      // pueden aceptar trabajos en hogares de clientes.
+      if (profile['is_verified'] != true) {
+        _showSnack(
+            'Tu identidad aún está en revisión. Podrás aceptar solicitudes cuando sea aprobada (24-48h).',
+            AppColors.warning);
+        return;
+      }
 
       final updated = await SupabaseService.client
           .from('bookings')

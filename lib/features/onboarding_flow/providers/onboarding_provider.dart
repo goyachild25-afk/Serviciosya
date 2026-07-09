@@ -156,24 +156,42 @@ Future<bool> isOnboardingComplete(String userId) async {
       return true;
     }
 
-    // If not in cache, check Supabase (source of truth for web)
+    // Fuente de verdad server-side. Ojo: la fila de `profiles` la crea un
+    // trigger de BD automáticamente en el registro, así que su existencia
+    // NO significa que el usuario pasó por el setup — con ese criterio,
+    // todo prestador recién registrado "ya había terminado" y aterrizaba
+    // en un dashboard sin perfil de prestador.
     final profile = await SupabaseService.client
         .from('profiles')
-        .select('id')
+        .select('id, role')
         .eq('id', userId)
         .limit(1)
         .maybeSingle();
 
-    // If profile exists, onboarding is complete
-    if (profile != null) {
-      // Update local cache for next time
-      await prefs.setBool('$_kOnboardingDonePrefix$userId', true);
-      LoggingService.info('Onboarding status from Supabase: true ($userId)');
-      return true;
+    if (profile == null) {
+      LoggingService.info('Onboarding status: false — sin perfil ($userId)');
+      return false;
     }
 
-    LoggingService.info('Onboarding status: false ($userId)');
-    return false;
+    // Prestadores: el setup termina creando su fila en provider_profiles.
+    // Esa fila es la señal real de onboarding completado.
+    if ((profile['role'] as String? ?? 'client') == 'provider') {
+      final providerProfile = await SupabaseService.client
+          .from('provider_profiles')
+          .select('id')
+          .eq('user_id', userId)
+          .limit(1)
+          .maybeSingle();
+      if (providerProfile == null) {
+        LoggingService.info(
+            'Onboarding status: false — prestador sin provider_profile ($userId)');
+        return false;
+      }
+    }
+
+    await prefs.setBool('$_kOnboardingDonePrefix$userId', true);
+    LoggingService.info('Onboarding status from Supabase: true ($userId)');
+    return true;
   } catch (e, st) {
     LoggingService.error('isOnboardingComplete failed for user $userId', e, st);
     LoggingService.addError('onboarding_provider', e, st);

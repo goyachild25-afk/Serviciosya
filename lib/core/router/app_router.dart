@@ -98,17 +98,31 @@ CustomTransitionPage<void> _slideUpPage(LocalKey key, Widget child) =>
 // ── Router provider ───────────────────────────────────────────────────────────
 
 final routerProvider = Provider<GoRouter>((ref) {
-  final authState = ref.watch(authStateProvider);
-  final userRole = ref.watch(userRoleProvider);
+  // El GoRouter debe construirse UNA sola vez por sesión. Antes este
+  // provider hacía ref.watch de authState/userRole/maintenance: cualquier
+  // cambio (p. ej. completar un registro) recreaba el router entero y la
+  // app "olvidaba" dónde estaba, reseteando a '/' (splash) — así un
+  // prestador recién registrado se saltaba /verify-email y el onboarding y
+  // aterrizaba directo en el dashboard. Ahora esos cambios solo disparan
+  // una reevaluación del redirect (refreshListenable) leyendo los valores
+  // frescos con ref.read, sin perder la ubicación actual.
+  final refresh = ValueNotifier(0);
+  ref.onDispose(refresh.dispose);
+  ref.listen(authStateProvider, (_, __) => refresh.value++);
+  ref.listen(userRoleProvider, (_, __) => refresh.value++);
   // Mantenimiento: lo lee en Realtime, así que activar el toggle desde el
   // panel admin bloquea a los usuarios no-admin en la próxima navegación
   // sin desplegar código.
-  final maintenance = ref.watch(maintenanceModeProvider).valueOrNull ?? false;
+  ref.listen(maintenanceModeProvider, (_, __) => refresh.value++);
 
   return GoRouter(
     initialLocation: '/',
+    refreshListenable: refresh,
     redirect: (context, state) {
-      final isLoggedIn = authState.value != null;
+      final isLoggedIn = ref.read(authStateProvider).value != null;
+      final userRole = ref.read(userRoleProvider);
+      final maintenance =
+          ref.read(maintenanceModeProvider).valueOrNull ?? false;
       final isDemo = ref.read(demoModeProvider);
       final path = state.matchedLocation;
 

@@ -497,7 +497,11 @@ class _ProviderOnboardingScreenState
       await markOnboardingComplete(user.id);
       ref.invalidate(currentUserProvider);
 
-      if (mounted) context.go('/dashboard');
+      // Encadenar directo con la verificación de identidad (Didit): es el
+      // momento con más motivación — acaba de configurar sus servicios y
+      // quiere empezar a recibir solicitudes. Puede posponerla con la
+      // flecha de volver (cae al dashboard).
+      if (mounted) context.go('/verify-identity');
     } catch (e) {
       _showError(e.toString());
     } finally {
