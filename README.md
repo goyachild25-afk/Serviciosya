@@ -30,6 +30,7 @@ Toda la documentación vive en [`docs/`](docs/), un tema por archivo:
 | [docs/BACKEND.md](docs/BACKEND.md) | Supabase: tablas, RLS, Edge Functions, trabajos programados, secretos. |
 | [docs/CONFIGURACION.md](docs/CONFIGURACION.md) | Entorno de desarrollo, versión de Flutter, build, despliegue y CI. |
 | [docs/SEGURIDAD_Y_PRIVACIDAD.md](docs/SEGURIDAD_Y_PRIVACIDAD.md) | Verificación de identidad (KYC), retención de datos, Ley 172-13. |
+| [docs/RESPALDO_YALO.md](docs/RESPALDO_YALO.md) | Respaldo maestro: todo el proyecto en un documento (infraestructura, BD, funciones, cómo reconstruir). |
 
 ---
 
