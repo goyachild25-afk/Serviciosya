@@ -1,4 +1,4 @@
-name: Deploy ServiciosYa
+name: Deploy YALO
 
 on:
   push:
