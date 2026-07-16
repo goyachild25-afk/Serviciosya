@@ -1213,8 +1213,13 @@ class _BookingRequestCardState extends ConsumerState<_BookingRequestCard> {
             const SizedBox(height: 4),
             Row(children: [
               const Icon(Icons.attach_money, size: 14, color: AppColors.primary),
-              Text('RD\$$price',
-                style: const TextStyle(fontSize: 13, color: AppColors.primary, fontWeight: FontWeight.w600)),
+              Flexible(
+                child: Text(
+                  'Recibirás ${PaymentService.formatPesos(PaymentService.providerAmount((price as num).toDouble()))}',
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(fontSize: 13, color: AppColors.primary, fontWeight: FontWeight.w600),
+                ),
+              ),
               if (paymentGuaranteed) ...[
                 const SizedBox(width: 8),
                 Container(
@@ -1231,6 +1236,13 @@ class _BookingRequestCardState extends ConsumerState<_BookingRequestCard> {
                 ),
               ],
             ]),
+            Padding(
+              padding: const EdgeInsets.only(left: 20, top: 1),
+              child: Text(
+                'de RD\$$price, −${(PaymentService.providerFeeRate * 100).toStringAsFixed(0)}% membresía',
+                style: const TextStyle(fontSize: 11, color: AppColors.textSecondary),
+              ),
+            ),
           ],
           if (booking['address'] != null) ...[
             const SizedBox(height: 4),
