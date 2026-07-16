@@ -242,7 +242,7 @@ final adminAuditLogProvider =
 final adminAppSettingsProvider =
     FutureProvider.autoDispose<Map<String, dynamic>>((ref) async {
   if (ref.watch(demoModeProvider)) {
-    return {'commission_rate': 0.15, 'maintenance_mode': false};
+    return {'client_fee_rate': 0.05, 'provider_fee_rate': 0.05, 'maintenance_mode': false};
   }
   try {
     final data = await SupabaseService.client.from('app_settings').select();

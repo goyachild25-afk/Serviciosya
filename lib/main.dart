@@ -4,6 +4,7 @@ import 'package:intl/date_symbol_data_local.dart';
 import 'package:timeago/timeago.dart' as timeago;
 import 'app.dart';
 import 'core/services/observability_service.dart';
+import 'core/services/payment_service.dart';
 import 'core/services/supabase_service.dart';
 
 void main() async {
@@ -23,6 +24,7 @@ void main() async {
     // Inicializar Supabase
     try {
       await SupabaseService.initialize();
+      await PaymentService.initialize();
     } catch (_) {
       // Sin credenciales reales → la app funciona en Modo Demo
     }

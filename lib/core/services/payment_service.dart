@@ -27,8 +27,32 @@ class PaymentResult {
 }
 
 class PaymentService {
-  /// Sin-op: no hay proveedor de pago activo todavía.
-  static void initialize() {}
+  /// Tasas de comisión efectivas. Arrancan con los valores por defecto de
+  /// [AppConstants] y se sobrescriben con lo que el admin configure en
+  /// Supabase (`app_settings.client_fee_rate` / `provider_fee_rate`).
+  static double clientFeeRate = AppConstants.clientFee;
+  static double providerFeeRate = AppConstants.providerFee;
+
+  /// Carga las tasas de comisión reales desde `app_settings`. Si falla
+  /// (sin conexión, modo demo, claves aún no creadas), se quedan los
+  /// valores por defecto de [AppConstants] — nunca lanza.
+  static Future<void> initialize() async {
+    try {
+      final rows = await SupabaseService.client
+          .from('app_settings')
+          .select()
+          .inFilter('key', ['client_fee_rate', 'provider_fee_rate']);
+      for (final row in (rows as List<dynamic>)) {
+        final r = row as Map<String, dynamic>;
+        final value = (r['value'] as num?)?.toDouble();
+        if (value == null) continue;
+        if (r['key'] == 'client_fee_rate') clientFeeRate = value;
+        if (r['key'] == 'provider_fee_rate') providerFeeRate = value;
+      }
+    } catch (_) {
+      // Se quedan los valores por defecto de AppConstants.
+    }
+  }
 
   /// Registra la intención de pago en Supabase y devuelve éxito.
   /// El cobro real se coordinará manualmente o via PayPal (próxima integración).
@@ -84,21 +108,22 @@ class PaymentService {
     }
   }
 
-  // ── Modelo de comisión 5% + 5% ──────────────────────────────────────────────
+  // ── Modelo de comisión (Garantía YALO + Membresía de Visibilidad) ───────────
+  // Tasas configurables por el admin — ver [clientFeeRate] / [providerFeeRate].
   static double clientTotal(double basePrice) =>
-      basePrice * (1 + AppConstants.clientFee);
+      basePrice * (1 + clientFeeRate);
 
   static double providerAmount(double basePrice) =>
-      basePrice * (1 - AppConstants.providerFee);
+      basePrice * (1 - providerFeeRate);
 
   static double platformFee(double basePrice) =>
-      basePrice * AppConstants.clientFee + basePrice * AppConstants.providerFee;
+      basePrice * clientFeeRate + basePrice * providerFeeRate;
 
   static double clientGuaranteeFee(double basePrice) =>
-      basePrice * AppConstants.clientFee;
+      basePrice * clientFeeRate;
 
   static double providerVisibilityFee(double basePrice) =>
-      basePrice * AppConstants.providerFee;
+      basePrice * providerFeeRate;
 
   static int pesosToCentavos(double pesos) => (pesos * 100).round();
 

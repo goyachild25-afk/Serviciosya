@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/constants/app_colors.dart';
-import '../../../core/constants/app_constants.dart';
 import '../../../core/services/payment_service.dart';
 import '../../../core/services/demo_provider.dart';
 import '../../../shared/widgets/custom_button.dart';
@@ -149,7 +148,7 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen> {
                   const Divider(height: 20),
                   _PriceRow(
                     label:
-                        'Comisión plataforma (${(AppConstants.platformCommission * 100).toStringAsFixed(0)}%)',
+                        'Comisión plataforma (${((PaymentService.clientFeeRate + PaymentService.providerFeeRate) * 100).toStringAsFixed(0)}%)',
                     value: _format(_platformFee),
                     isSubtle: true,
                   ),

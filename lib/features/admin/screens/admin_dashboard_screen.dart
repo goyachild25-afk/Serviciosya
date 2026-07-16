@@ -4,8 +4,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import '../../../core/constants/app_colors.dart';
-import '../../../core/constants/app_constants.dart';
 import '../../../core/services/supabase_service.dart';
+import '../../../core/services/payment_service.dart';
 import '../../../core/services/demo_provider.dart';
 import '../providers/admin_provider.dart';
 import '../../auth/providers/auth_provider.dart';
@@ -2535,13 +2535,16 @@ class _SettingsTab extends ConsumerStatefulWidget {
 
 class _SettingsTabState extends ConsumerState<_SettingsTab> {
   bool _saving = false;
-  final TextEditingController _commissionCtrl = TextEditingController();
+  final TextEditingController _clientFeeCtrl = TextEditingController();
+  final TextEditingController _providerFeeCtrl = TextEditingController();
 
-  Future<void> _saveCommission(double current) async {
-    final pct = double.tryParse(_commissionCtrl.text.trim());
-    if (pct == null || pct < 0 || pct > 100) {
+  Future<void> _saveFees() async {
+    final clientPct = double.tryParse(_clientFeeCtrl.text.trim());
+    final providerPct = double.tryParse(_providerFeeCtrl.text.trim());
+    if (clientPct == null || clientPct < 0 || clientPct > 100 ||
+        providerPct == null || providerPct < 0 || providerPct > 100) {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-        content: Text('Ingresa un porcentaje válido entre 0 y 100.'),
+        content: Text('Ingresa porcentajes válidos entre 0 y 100.'),
         backgroundColor: AppColors.error,
       ));
       return;
@@ -2549,15 +2552,18 @@ class _SettingsTabState extends ConsumerState<_SettingsTab> {
     setState(() => _saving = true);
     try {
       if (!ref.read(demoModeProvider)) {
-        await SupabaseService.client.from('app_settings').update({
-          'value': pct / 100,
-          'updated_at': DateTime.now().toIso8601String(),
-        }).eq('key', 'commission_rate');
+        final now = DateTime.now().toIso8601String();
+        await SupabaseService.client.from('app_settings').upsert([
+          {'key': 'client_fee_rate', 'value': clientPct / 100, 'updated_at': now},
+          {'key': 'provider_fee_rate', 'value': providerPct / 100, 'updated_at': now},
+        ], onConflict: 'key');
         await logAdminAction(
             action: 'Actualizó comisión de la plataforma',
-            targetTable: 'app_settings', targetId: 'commission_rate',
-            details: {'new_value': pct / 100});
+            targetTable: 'app_settings', targetId: 'client_fee_rate,provider_fee_rate',
+            details: {'client_fee_rate': clientPct / 100, 'provider_fee_rate': providerPct / 100});
         ref.invalidate(adminAppSettingsProvider);
+        PaymentService.clientFeeRate = clientPct / 100;
+        PaymentService.providerFeeRate = providerPct / 100;
       }
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
@@ -2609,7 +2615,8 @@ class _SettingsTabState extends ConsumerState<_SettingsTab> {
 
   @override
   void dispose() {
-    _commissionCtrl.dispose();
+    _clientFeeCtrl.dispose();
+    _providerFeeCtrl.dispose();
     super.dispose();
   }
 
@@ -2623,10 +2630,16 @@ class _SettingsTabState extends ConsumerState<_SettingsTab> {
           message: e.toString(),
           onRetry: () => ref.invalidate(adminAppSettingsProvider)),
       data: (settings) {
-        final commissionRate = ((settings['commission_rate'] as num?) ?? 0.15).toDouble();
+        final clientFeeRate =
+            ((settings['client_fee_rate'] as num?) ?? PaymentService.clientFeeRate).toDouble();
+        final providerFeeRate =
+            ((settings['provider_fee_rate'] as num?) ?? PaymentService.providerFeeRate).toDouble();
         final maintenanceMode = settings['maintenance_mode'] as bool? ?? false;
-        if (_commissionCtrl.text.isEmpty) {
-          _commissionCtrl.text = (commissionRate * 100).toStringAsFixed(1);
+        if (_clientFeeCtrl.text.isEmpty) {
+          _clientFeeCtrl.text = (clientFeeRate * 100).toStringAsFixed(1);
+        }
+        if (_providerFeeCtrl.text.isEmpty) {
+          _providerFeeCtrl.text = (providerFeeRate * 100).toStringAsFixed(1);
         }
 
         return SingleChildScrollView(
@@ -2635,6 +2648,11 @@ class _SettingsTabState extends ConsumerState<_SettingsTab> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const _SectionTitle('Comisión de la plataforma'),
+              const SizedBox(height: 4),
+              const Text(
+                'Garantía YALO (cargo al cliente) y Membresía de Visibilidad (descuento al prestador), por separado.',
+                style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
+              ),
               const SizedBox(height: 12),
               Container(
                 padding: const EdgeInsets.all(16),
@@ -2643,23 +2661,39 @@ class _SettingsTabState extends ConsumerState<_SettingsTab> {
                   borderRadius: BorderRadius.circular(16),
                   border: Border.all(color: AppColors.divider),
                 ),
-                child: Row(
+                child: Column(
                   children: [
-                    Expanded(
-                      child: TextField(
-                        controller: _commissionCtrl,
-                        keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                        decoration: const InputDecoration(
-                            labelText: 'Comisión (%)', suffixText: '%'),
-                      ),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: TextField(
+                            controller: _clientFeeCtrl,
+                            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                            decoration: const InputDecoration(
+                                labelText: 'Garantía YALO — cliente (%)', suffixText: '%'),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: TextField(
+                            controller: _providerFeeCtrl,
+                            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                            decoration: const InputDecoration(
+                                labelText: 'Membresía — prestador (%)', suffixText: '%'),
+                          ),
+                        ),
+                      ],
                     ),
-                    const SizedBox(width: 12),
-                    ElevatedButton(
-                      onPressed: _saving ? null : () => _saveCommission(commissionRate),
-                      child: _saving
-                          ? const SizedBox(width: 16, height: 16,
-                              child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                          : const Text('Guardar'),
+                    const SizedBox(height: 12),
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: ElevatedButton(
+                        onPressed: _saving ? null : _saveFees,
+                        child: _saving
+                            ? const SizedBox(width: 16, height: 16,
+                                child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                            : const Text('Guardar'),
+                      ),
                     ),
                   ],
                 ),
@@ -2930,9 +2964,9 @@ class _RevenueCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Comisión total = 10% del volumen base (5% clientFee + 5% providerFee)
-    final clientFeeTotal    = revenue * AppConstants.clientFee;
-    final providerFeeTotal  = revenue * AppConstants.providerFee;
+    // Comisión total = tasas configuradas en Configuración (Garantía YALO + Membresía)
+    final clientFeeTotal    = revenue * PaymentService.clientFeeRate;
+    final providerFeeTotal  = revenue * PaymentService.providerFeeRate;
     final totalCommission   = clientFeeTotal + providerFeeTotal;
     return Container(
       padding: const EdgeInsets.all(18),
