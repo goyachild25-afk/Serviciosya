@@ -124,7 +124,7 @@ Cashback 2-3% en puntos por pagar dentro de la app (canjeable como descuento, ex
 - ~~Suspensión de usuario con motivo visible~~ — hecho 2026-07-16 (ver hallazgo arriba)
 - ~~Notificación al admin cuando llega verificación/disputa nueva~~ — hecho 2026-07-16: toast en vivo (Realtime) mientras el admin está en el dashboard, más refresco automático de la pestaña correspondiente. De paso se encontró y corrigió que `verification_requests`, `disputes` y `app_settings` no estaban en la publicación de Realtime — el modo mantenimiento en vivo llevaba tiempo sin propagarse entre sesiones por lo mismo
 - ~~Botón "Contactar" directo en Usuarios y Disputas~~ — hecho 2026-07-16: WhatsApp con el teléfono, o `mailto:` si no hay teléfono
-- Métrica "tiempo hasta primera aceptación" en Analytics
+- ~~Métrica "tiempo hasta primera aceptación" en Analytics~~ — hecho 2026-07-16: nueva columna `bookings.accepted_at` (no se puede aproximar con `updated_at`, se pisa en transiciones posteriores) + promedio en el tab de Analytics. Sin datos históricos — empieza a acumular desde hoy. De paso se corrigió que el paso "Aceptadas" del embudo filtraba por status actual en vez de por haber pasado alguna vez por accepted, lo que podía mostrar menos aceptadas que completadas
 
 ### 4. Panel Prestador — mejoras identificadas, no implementadas
 - ~~Desglose de ganancia neta por trabajo en la tarjeta~~ — hecho 2026-07-16

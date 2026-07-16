@@ -495,6 +495,7 @@ class _OpenRequestsWithMapState extends ConsumerState<_OpenRequestsWithMap> {
         return;
       }
 
+      final now = DateTime.now().toIso8601String();
       final updated = await SupabaseService.client
           .from('bookings')
           .update({
@@ -502,7 +503,8 @@ class _OpenRequestsWithMapState extends ConsumerState<_OpenRequestsWithMap> {
             'provider_name': profile['full_name'],
             'provider_avatar_url': profile['avatar_url'],
             'status': 'accepted',
-            'updated_at': DateTime.now().toIso8601String(),
+            'accepted_at': now,
+            'updated_at': now,
           })
           .eq('id', booking['id'] as String)
           .eq('status', 'pending')

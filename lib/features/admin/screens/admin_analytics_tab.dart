@@ -23,12 +23,14 @@ class _AnalyticsData {
   final int totalReferralInvites;
   final int completedReferralActivations;
   final List<_EventCount> topEvents;
+  final Duration? avgTimeToAcceptance;
   const _AnalyticsData({
     required this.funnel,
     required this.eventsByDay,
     required this.totalReferralInvites,
     required this.completedReferralActivations,
     required this.topEvents,
+    required this.avgTimeToAcceptance,
   });
 }
 
@@ -55,11 +57,15 @@ final _analyticsDataProvider =
         .from('bookings')
         .select('id')
         .gte('created_at', since14),
-    // bookings aceptados (14d)
+    // bookings aceptados alguna vez (14d), con created_at/accepted_at para
+    // el tiempo hasta primera aceptación. accepted_at no se pisa en
+    // transiciones posteriores (in_progress, completed) a diferencia de
+    // updated_at — por eso filtramos por accepted_at, no por status
+    // actual, o subestimaríamos el conteo del embudo.
     SupabaseService.client
         .from('bookings')
-        .select('id')
-        .eq('status', 'accepted')
+        .select('created_at, accepted_at')
+        .not('accepted_at', 'is', null)
         .gte('created_at', since14),
     // bookings completados (14d)
     SupabaseService.client
@@ -81,10 +87,28 @@ final _analyticsDataProvider =
 
   final signups = (results[0] as List<dynamic>).length;
   final bookingsCreated = (results[1] as List<dynamic>).length;
-  final bookingsAccepted = (results[2] as List<dynamic>).length;
+  final acceptedBookings = (results[2] as List<dynamic>).cast<Map<String, dynamic>>();
+  final bookingsAccepted = acceptedBookings.length;
   final bookingsCompleted = (results[3] as List<dynamic>).length;
   final events = (results[4] as List<dynamic>).cast<Map<String, dynamic>>();
   final referrals = (results[5] as List<dynamic>).cast<Map<String, dynamic>>();
+
+  // Tiempo hasta primera aceptación: promedio de (accepted_at - created_at)
+  // sobre las reservas de la ventana que ya fueron aceptadas. Sin datos
+  // todavía si nadie aceptó nada en 14 días (columna nueva desde hoy).
+  Duration? avgTimeToAcceptance;
+  final gaps = <Duration>[];
+  for (final b in acceptedBookings) {
+    final created = DateTime.tryParse(b['created_at'] as String? ?? '');
+    final accepted = DateTime.tryParse(b['accepted_at'] as String? ?? '');
+    if (created == null || accepted == null) continue;
+    final gap = accepted.difference(created);
+    if (!gap.isNegative) gaps.add(gap);
+  }
+  if (gaps.isNotEmpty) {
+    final totalMs = gaps.fold<int>(0, (sum, g) => sum + g.inMilliseconds);
+    avgTimeToAcceptance = Duration(milliseconds: totalMs ~/ gaps.length);
+  }
 
   final funnel = [
     _FunnelStep(
@@ -145,8 +169,16 @@ final _analyticsDataProvider =
     totalReferralInvites: referrals.length,
     completedReferralActivations: referrals.length,
     topEvents: topEvents,
+    avgTimeToAcceptance: avgTimeToAcceptance,
   );
 });
+
+/// "2h 15min", "45min", o "3d 2h" según la magnitud.
+String _formatDuration(Duration d) {
+  if (d.inDays >= 1) return '${d.inDays}d ${d.inHours % 24}h';
+  if (d.inHours >= 1) return '${d.inHours}h ${d.inMinutes % 60}min';
+  return '${d.inMinutes}min';
+}
 
 class AdminAnalyticsTab extends ConsumerWidget {
   const AdminAnalyticsTab({super.key});
@@ -175,6 +207,38 @@ class AdminAnalyticsTab extends ConsumerWidget {
                     fontSize: 16, fontWeight: FontWeight.w700)),
             const SizedBox(height: 10),
             _FunnelChart(steps: data.funnel),
+            const SizedBox(height: 12),
+
+            // Tiempo hasta primera aceptación
+            Container(
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: AppColors.infoLight,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.timer_outlined, color: AppColors.info, size: 20),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          data.avgTimeToAcceptance != null
+                              ? _formatDuration(data.avgTimeToAcceptance!)
+                              : 'Sin datos aún',
+                          style: const TextStyle(
+                              fontSize: 15, fontWeight: FontWeight.w800, color: AppColors.info),
+                        ),
+                        const Text('Tiempo promedio hasta primera aceptación',
+                            style: TextStyle(fontSize: 11, color: AppColors.textSecondary)),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
             const SizedBox(height: 24),
 
             // Eventos por día (mini bar chart)
