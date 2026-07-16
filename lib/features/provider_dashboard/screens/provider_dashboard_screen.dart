@@ -257,7 +257,7 @@ class ProviderDashboardScreen extends ConsumerWidget {
 
             // ── Estadísticas
             bookingsAsync.when(
-              data: (b) => _buildStats(b),
+              data: (b) => _buildStats(context, b),
               loading: () => const _StatsSkeletonRow(),
               error: (_, __) => const SizedBox(),
             ),
@@ -284,8 +284,17 @@ class ProviderDashboardScreen extends ConsumerWidget {
             const SizedBox(height: 24),
 
             // ── Solicitudes recientes (ya asignadas al prestador)
-            const Text('Mis solicitudes recientes',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text('Mis solicitudes recientes',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+                TextButton(
+                  onPressed: () => context.push('/provider-history'),
+                  child: const Text('Ver historial', style: TextStyle(fontSize: 13)),
+                ),
+              ],
+            ),
             const SizedBox(height: 12),
             bookingsAsync.when(
               loading: () => const _BookingsSkeletonList(),
@@ -317,7 +326,7 @@ class ProviderDashboardScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildStats(List<dynamic> bookings) {
+  Widget _buildStats(BuildContext context, List<dynamic> bookings) {
     final pending = bookings.where((b) => b['status'] == 'pending').length;
     final completed = bookings.where((b) => b['status'] == 'completed').length;
     final totalEarned = bookings
@@ -332,7 +341,8 @@ class ProviderDashboardScreen extends ConsumerWidget {
         const SizedBox(width: 10),
         Expanded(child: _StatCard(
           label: 'Completados', value: completed.toString(),
-          icon: Icons.check_circle_outline, color: AppColors.success, background: AppColors.successLight)),
+          icon: Icons.check_circle_outline, color: AppColors.success, background: AppColors.successLight,
+          onTap: () => context.push('/provider-history'))),
         const SizedBox(width: 10),
         Expanded(child: _StatCard(
           label: 'Ingresos', value: 'RD\$${totalEarned.toStringAsFixed(0)}',
@@ -872,12 +882,13 @@ class _StatCard extends StatelessWidget {
   final String label, value;
   final IconData icon;
   final Color color, background;
+  final VoidCallback? onTap;
   const _StatCard({required this.label, required this.value, required this.icon,
-      required this.color, required this.background});
+      required this.color, required this.background, this.onTap});
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    final card = Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(color: background, borderRadius: BorderRadius.circular(14)),
       child: Column(
@@ -889,6 +900,12 @@ class _StatCard extends StatelessWidget {
           Text(label, style: const TextStyle(fontSize: 11, color: AppColors.textSecondary)),
         ],
       ),
+    );
+    if (onTap == null) return card;
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(14),
+      child: card,
     );
   }
 }
@@ -1650,5 +1667,89 @@ class _UserLocationMapState extends ConsumerState<_UserLocationMap> {
   void dispose() {
     _mapController?.dispose();
     super.dispose();
+  }
+}
+
+// ── Historial de trabajos completados ─────────────────────────────────────────
+// Antes solo se veían en "Mis solicitudes recientes" hasta que se completaban
+// y desaparecían — el prestador se quedaba solo con el contador "Completados".
+// Esta pantalla es el historial completo, más reciente primero.
+
+class ProviderHistoryScreen extends ConsumerWidget {
+  const ProviderHistoryScreen({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final bookingsAsync = ref.watch(providerBookingsProvider);
+
+    return Scaffold(
+      backgroundColor: AppColors.background,
+      appBar: AppBar(title: const Text('Historial de trabajos')),
+      body: bookingsAsync.when(
+        loading: () => const _BookingsSkeletonList(),
+        error: (e, _) => Center(child: Text('Error: $e')),
+        data: (bookings) {
+          final completed = bookings
+              .where((b) => (b as Map<String, dynamic>)['status'] == 'completed')
+              .cast<Map<String, dynamic>>()
+              .toList()
+            ..sort((a, b) {
+              final da = DateTime.tryParse(a['scheduled_date'] as String? ?? '');
+              final db = DateTime.tryParse(b['scheduled_date'] as String? ?? '');
+              if (da == null || db == null) return 0;
+              return db.compareTo(da);
+            });
+
+          if (completed.isEmpty) {
+            return const Center(
+              child: Padding(
+                padding: EdgeInsets.all(32),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.history, size: 56, color: AppColors.textHint),
+                    SizedBox(height: 12),
+                    Text('Aún no tienes trabajos completados',
+                      style: TextStyle(fontSize: 15, fontWeight: FontWeight.w500, color: AppColors.textSecondary)),
+                  ],
+                ),
+              ),
+            );
+          }
+
+          final totalEarned = completed
+              .where((b) => b['agreed_price'] != null)
+              .fold<double>(0, (sum, b) =>
+                  sum + PaymentService.providerAmount((b['agreed_price'] as num).toDouble()));
+
+          return ListView(
+            padding: const EdgeInsets.all(20),
+            children: [
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: AppColors.successLight,
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text('${completed.length} trabajos completados',
+                      style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.success)),
+                    Text('Recibido: ${PaymentService.formatPesos(totalEarned)}',
+                      style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: AppColors.success)),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+              ...completed.map((b) => Padding(
+                    padding: const EdgeInsets.only(bottom: 12),
+                    child: _BookingRequestCard(booking: b),
+                  )),
+            ],
+          );
+        },
+      ),
+    );
   }
 }

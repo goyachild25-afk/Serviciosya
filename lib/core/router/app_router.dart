@@ -483,6 +483,11 @@ final routerProvider = Provider<GoRouter>((ref) {
         pageBuilder: (_, state) =>
             _slidePage(state.pageKey, const ProviderServicesScreen()),
       ),
+      GoRoute(
+        path: '/provider-history',
+        pageBuilder: (_, state) =>
+            _slidePage(state.pageKey, const ProviderHistoryScreen()),
+      ),
     ],
     errorBuilder: (context, state) => Scaffold(
       body: Center(
