@@ -496,7 +496,7 @@ final adminDisputesProvider =
     final data = await SupabaseService.client
         .from('disputes')
         .select(
-            '*, reporter:profiles!reporter_id(full_name), reported:profiles!reported_id(full_name)')
+            '*, reporter:profiles!reporter_id(full_name, phone, email), reported:profiles!reported_id(full_name, phone, email)')
         .inFilter('status', ['open', 'inReview'])
         .order('created_at', ascending: false);
     return (data as List<dynamic>).cast<Map<String, dynamic>>();

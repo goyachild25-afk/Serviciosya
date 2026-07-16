@@ -123,7 +123,7 @@ Cashback 2-3% en puntos por pagar dentro de la app (canjeable como descuento, ex
 - ~~Exportar Finanzas a CSV~~ — hecho 2026-07-16
 - ~~Suspensión de usuario con motivo visible~~ — hecho 2026-07-16 (ver hallazgo arriba)
 - Notificación al admin cuando llega verificación/disputa nueva
-- Botón "Contactar" directo en Usuarios y Disputas
+- ~~Botón "Contactar" directo en Usuarios y Disputas~~ — hecho 2026-07-16: WhatsApp con el teléfono, o `mailto:` si no hay teléfono
 - Métrica "tiempo hasta primera aceptación" en Analytics
 
 ### 4. Panel Prestador — mejoras identificadas, no implementadas

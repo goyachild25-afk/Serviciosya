@@ -1,5 +1,6 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
@@ -1099,7 +1100,12 @@ class _DisputeCard extends StatelessWidget {
           Row(
             children: [
               _PartyChip(
-                  label: 'Reportó', name: reporterName, color: AppColors.info),
+                  label: 'Reportó', name: reporterName, color: AppColors.info,
+                  onContact: () => contactUser(
+                      context: context,
+                      name: reporterName,
+                      phone: reporter?['phone'] as String?,
+                      email: reporter?['email'] as String?)),
               const SizedBox(width: 8),
               const Icon(Icons.arrow_forward,
                   size: 14, color: AppColors.textHint),
@@ -1107,7 +1113,12 @@ class _DisputeCard extends StatelessWidget {
               _PartyChip(
                   label: 'Reportado',
                   name: reportedName,
-                  color: AppColors.error),
+                  color: AppColors.error,
+                  onContact: () => contactUser(
+                      context: context,
+                      name: reportedName,
+                      phone: reported?['phone'] as String?,
+                      email: reported?['email'] as String?)),
             ],
           ),
           const SizedBox(height: 10),
@@ -1195,8 +1206,9 @@ class _PartyChip extends StatelessWidget {
   final String label;
   final String name;
   final Color color;
+  final VoidCallback? onContact;
   const _PartyChip(
-      {required this.label, required this.name, required this.color});
+      {required this.label, required this.name, required this.color, this.onContact});
 
   @override
   Widget build(BuildContext context) {
@@ -1208,19 +1220,34 @@ class _PartyChip extends StatelessWidget {
           borderRadius: BorderRadius.circular(8),
           border: Border.all(color: color.withValues(alpha: 0.25)),
         ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+        child: Row(
           children: [
-            Text(label,
-                style: TextStyle(
-                    fontSize: 9,
-                    fontWeight: FontWeight.w700,
-                    color: color)),
-            Text(name,
-                style: const TextStyle(
-                    fontSize: 12, fontWeight: FontWeight.w600),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(label,
+                      style: TextStyle(
+                          fontSize: 9,
+                          fontWeight: FontWeight.w700,
+                          color: color)),
+                  Text(name,
+                      style: const TextStyle(
+                          fontSize: 12, fontWeight: FontWeight.w600),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis),
+                ],
+              ),
+            ),
+            if (onContact != null)
+              InkWell(
+                onTap: onContact,
+                borderRadius: BorderRadius.circular(20),
+                child: Padding(
+                  padding: const EdgeInsets.all(4),
+                  child: Icon(Icons.chat_outlined, size: 16, color: color),
+                ),
+              ),
           ],
         ),
       ),
@@ -1720,11 +1747,23 @@ class _UsersTabState extends ConsumerState<_UsersTab> {
                                   if (action == 'edit') _editProfile(u);
                                   if (action == 'active') _toggleActive(u);
                                   if (action == 'admin') _toggleAdmin(u);
+                                  if (action == 'contact') {
+                                    contactUser(
+                                      context: context,
+                                      name: name,
+                                      phone: u['phone'] as String?,
+                                      email: email,
+                                    );
+                                  }
                                 },
                                 itemBuilder: (_) => [
                                   const PopupMenuItem(
                                     value: 'detail',
                                     child: Text('Ver detalle'),
+                                  ),
+                                  const PopupMenuItem(
+                                    value: 'contact',
+                                    child: Text('Contactar'),
                                   ),
                                   const PopupMenuItem(
                                     value: 'edit',
@@ -3300,6 +3339,36 @@ class _AccessDenied extends StatelessWidget {
 }
 
 // ─── Simple confirm dialog (sin texto libre) ──────────────────────────────────
+// ─── Contactar directo (WhatsApp con el teléfono, o abrir el correo) ─────────
+Future<void> contactUser({
+  required BuildContext context,
+  required String name,
+  String? phone,
+  String? email,
+}) async {
+  final digits = (phone ?? '').replaceAll(RegExp(r'[^0-9]'), '');
+  if (digits.length >= 10) {
+    // Números dominicanos: 10 dígitos locales → anteponer código de país (1).
+    final withCountryCode = digits.length == 10 ? '1$digits' : digits;
+    final uri = Uri.parse(
+        'https://wa.me/$withCountryCode?text=${Uri.encodeComponent("Hola $name, te contacto desde el equipo de YALO.")}');
+    final ok = await launchUrl(uri, mode: LaunchMode.externalApplication);
+    if (ok) return;
+  }
+  if (email != null && email.isNotEmpty) {
+    final uri = Uri(scheme: 'mailto', path: email,
+        queryParameters: {'subject': 'YALO'});
+    final ok = await launchUrl(uri);
+    if (ok) return;
+  }
+  if (context.mounted) {
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Text('$name no tiene teléfono ni correo válido registrado.'),
+      backgroundColor: AppColors.warning,
+    ));
+  }
+}
+
 Future<bool> _showConfirmDialog({
   required BuildContext context,
   required String title,
