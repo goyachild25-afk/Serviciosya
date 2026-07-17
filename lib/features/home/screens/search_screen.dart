@@ -97,6 +97,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
           .select('id, full_name, avatar_url, city, province, rating, is_verified')
           .ilike('full_name', '%$_query%')
           .eq('is_available', true)
+          .eq('is_verified', true)
           .limit(15);
       final hits = (rows as List<dynamic>).map((r) {
         final m = r as Map<String, dynamic>;

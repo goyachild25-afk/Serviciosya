@@ -105,7 +105,8 @@ final providersListProvider =
             form_fields
           )
         ''')
-        .eq('is_available', true);
+        .eq('is_available', true)
+        .eq('is_verified', true);
 
     if (locationFilter.province != null &&
         locationFilter.province!.isNotEmpty) {
